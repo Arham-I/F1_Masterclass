@@ -4,8 +4,8 @@ A companion app that follows an F1 weekend session by session. After each sessio
 (FP1 → FP2 → FP3 → Qualifying, plus Sprint sessions on sprint weekends) it refreshes the
 charts for that session.
 
-**Status: Day 1 of a 3-day build.** Working today: data pipeline, replay mode, and three
-per-session charts. **Not built yet:** race-result prediction, backtest, generated commentary,
+**Status: Day 2 of a 3-day build.** Working: data pipeline, replay mode, three per-session
+charts, race-result prediction with a backtest. **Not built yet:** generated commentary,
 notifications.
 
 ## What you can do in the app
@@ -18,6 +18,32 @@ see sessions that have already "happened". The Race is never revealed. Each sess
 - **Long-run pace**: lap-time spread on long stints, compared with the field on the *same*
   compound so soft and hard runners are comparable
 - **Tyre stints**: every stint per driver, by compound
+
+## Prediction and backtest
+
+After each revealed session the app shows podium and win probabilities plus a typical-error
+figure that shrinks as the weekend goes on (before Qualifying there is no grid, so the guess is
+much less certain).
+
+- **Baseline:** finish where you qualify; before Qualifying, where practice pace ranks you.
+- **Model:** ridge regression on relative features (pace ranks and gaps, long-run rank, in-season
+  team and driver form), trained on earlier races only, one model per stage.
+- **Backtest:** expanding window over all 14 completed 2026 races, each predicted using only its
+  own already-revealed sessions plus earlier races' results. Tests scramble everything a
+  predictor must not see and assert the output doesn't change.
+
+**Result (Spearman with the real finishing order, mean of 14 races):** the model does **not** beat
+the baseline. After Qualifying the baseline scores 0.73 vs 0.71 (model minus baseline -0.016,
+95% interval excludes zero); before Qualifying the model is ahead by 0.00 to 0.02, inside the
+noise. The model's podium probabilities are also worse calibrated (Brier) at every stage. So the
+baseline is the default and the model is selectable for comparison. With 14 races the intervals are
+wide; a larger effect could hide inside them. I tried ridge only; no LightGBM (scikit-learn/LightGBM
+are not installed, and ~2k rows with 7 features doesn't call for it).
+
+Known gaps: on sprint weekends stages 2-3 are Sprint Qualifying and Sprint, whose results are
+not used as features. Race noise (crashes, safety cars) is modelled as independent per driver.
+
+Regenerate with `python scripts/backtest.py` (needs scipy from requirements-dev.txt).
 
 ## Run locally
 

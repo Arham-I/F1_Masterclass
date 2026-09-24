@@ -8,6 +8,7 @@ from __future__ import annotations
 import pandas as pd
 import streamlit as st
 
+from f1cc import backtest_summary as bts
 from f1cc import charts, store
 from f1cc.replay import Cutoff, Weekend, apply_cutoff
 
@@ -17,6 +18,11 @@ st.set_page_config(page_title="F1 Race Weekend Companion", page_icon="🏁", lay
 @st.cache_data(show_spinner=False)
 def load_tables() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     return store.read("features"), store.read("laps"), store.read("stints")
+
+
+@st.cache_data(show_spinner=False)
+def load_predictions(year: int) -> tuple[pd.DataFrame, pd.DataFrame]:
+    return store.read("predictions", [year]), store.read("backtest", [year])
 
 
 @st.cache_data(show_spinner=False)
@@ -43,6 +49,43 @@ STYLE = """
 .pill.now{color:#fff;background:#E10600;border-color:#E10600;font-weight:600}
 </style>
 """
+
+
+STAGE_LABELS = {1: "1st session", 2: "2nd session", 3: "3rd session", 4: "Qualifying"}
+
+
+def prediction_section(cutoff: Cutoff) -> None:
+    """Race prediction as of the revealed sessions. Predictions are precomputed by
+    scripts/backtest.py *per stage*, so the row shown here was built without later sessions."""
+    st.subheader("Race prediction")
+    preds, bt = load_predictions(cutoff.weekend.year)
+    if preds.empty:
+        st.info("Predictions exist for 2026 only.")
+        return
+    names = list(dict.fromkeys(preds["predictor"]))
+    default = names.index(bts.BASELINE)
+    who = st.selectbox("Predictor", names, index=default, help="Baseline is shipped by default: "
+                       "it was not beaten in the backtest (see the backtest below).")
+    w = cutoff.weekend
+    mine = preds[(preds["round"] == w.round) & (preds["predictor"] == who)]
+    labels = {i + 1: n for i, n in enumerate(w.replayable)}
+    now = mine[mine["stage"] == cutoff.revealed]
+    left, right = st.columns([3, 2])
+    left.plotly_chart(charts.prediction_chart(now, labels[cutoff.revealed], who), width="stretch",
+                      config={"displayModeBar": False})
+    right.plotly_chart(charts.uncertainty_chart(mine, labels, cutoff.revealed), width="stretch",
+                       config={"displayModeBar": False})
+    if cutoff.revealed < 4:
+        st.caption("Before Qualifying there is no grid, so the prediction has to guess qualifying "
+                   "too: expect wide error bars that tighten as the weekend goes on.")
+    with st.expander("Backtest: how good is this, really?"):
+        summary = bts.summarize(bt)
+        st.plotly_chart(charts.backtest_chart(summary, STAGE_LABELS), width="stretch",
+                        config={"displayModeBar": False})
+        diff = bts.paired_diff(bt, "Ridge (all seasons)")
+        st.caption("Ridge minus baseline (Spearman), 95% interval over the races: "
+                   + " · ".join(f"{STAGE_LABELS[int(r.stage)]} {r['diff']:+.3f} [{r.lo:+.3f}, {r.hi:+.3f}]"
+                                for _, r in diff.iterrows()))
 
 
 def main() -> None:
@@ -95,6 +138,8 @@ def main() -> None:
                        config={"displayModeBar": False})
     st.plotly_chart(charts.stint_chart(f, s, session), width="stretch",
                     config={"displayModeBar": False})
+
+    prediction_section(cutoff)
 
     with st.expander("Table view"):
         cols = ["driver", "team", "best_lap_s", "gap_to_best_s", "pace_rank", "longrun_n",
