@@ -4,10 +4,16 @@ A predictor answers one question: given a weekend and a cutoff, how will the Rac
 Everything it may know comes from exactly two places:
 
 * the weekend's own sessions that ``apply_cutoff`` reveals (never the Race), and
-* Race results of weekends that finished *strictly before* this one (form + training data).
+* Race results of weekends that finished *strictly before* this one (form, reliability,
+  training data and the predictor's own past errors).
 
-``FeatureBuilder.matrix`` is the only door to the data and enforces both rules, so predictors
-built on it cannot leak, and the backtest is fair by construction.
+``FeatureBuilder.matrix`` is the only door to a weekend's sessions and ``FeatureBuilder.result``
+the only door to Race results; both enforce these rules, so predictors built on them cannot
+leak, and the backtest is fair by construction.
+
+Probabilities come from :func:`simulate`: a retirement draw per driver (team reliability so far
+this season) plus finishing-order noise whose size grows down the order (fitted to the
+predictor's own out-of-sample errors on earlier weekends).
 """
 from __future__ import annotations
 
@@ -21,21 +27,39 @@ from ..replay import Cutoff, Weekend, apply_cutoff
 PRIOR_POS = 10.5           # mean finishing position of a 20-car field: what "no history" means
 TEAM_SHRINK = 4.0          # pseudo-observations of PRIOR_POS mixed into a team's form (2 cars/race)
 DRIVER_SHRINK = 2.0
-FEATURES = ["prac_rank", "prac_gap_pct", "lr_rank", "q_pos", "q_gap_pct", "team_form", "driver_form"]
+DNF_SHRINK = 20.0          # pseudo-starts of the long-run retirement rate mixed into a team's season rate
+ERROR_WINDOW = 40          # earlier weekends whose prediction errors size the noise
+MIN_SIGMA = 0.75           # places; even a dominant pole sitter is never a certainty
+FALLBACK_SIGMA = 3.5       # places, when there are no earlier errors to learn from
+SPRINT_QUALI = ("Sprint Qualifying", "Sprint Shootout")
+FINISHED = ("Finished", "Lapped")
+FEATURES = ["prac_rank", "prac_gap_pct", "lr_rank", "sprint_rank", "sprint_pos", "q_pos", "q_gap_pct",
+            "team_form", "driver_form"]
+OUTPUT = ["driver", "team", "team_color", "score", "expected_pos", "sigma", "p_dnf", "p_win", "p_podium"]
 
 
 class Predictor(Protocol):
     name: str
 
     def predict(self, cutoff: Cutoff) -> pd.DataFrame:
-        """Columns: driver, team, team_color, score, expected_pos, p_win, p_podium, sigma."""
+        """Columns: see ``OUTPUT``. ``sigma`` is the noise (in places) for that driver."""
 
 
-def simulate(score: np.ndarray, sigma: float, n: int = 20000, seed: int = 0) -> tuple[np.ndarray, np.ndarray]:
-    """Win and podium probabilities: lower score finishes ahead; noise of size ``sigma`` (in
-    finishing places) is added to every driver and the field is re-ranked ``n`` times."""
+def finished(status: pd.Series) -> pd.Series:
+    return status.isin(FINISHED) | status.str.startswith("+")
+
+
+def simulate(center: np.ndarray, sigma, p_dnf: np.ndarray | None = None, n: int = 20000,
+             seed: int = 0) -> tuple[np.ndarray, np.ndarray]:
+    """Win and podium probabilities. Each run: every driver retires with probability ``p_dnf``
+    (and drops to the back); the rest finish in order of ``center`` plus Gaussian noise of size
+    ``sigma`` (a scalar or one value per driver, in places)."""
     rng = np.random.default_rng(seed)
-    sim = score[None, :] + sigma * rng.standard_normal((n, len(score)))
+    center = np.asarray(center, dtype=float)
+    sigma = np.broadcast_to(np.asarray(sigma, dtype=float), center.shape)
+    sim = center[None, :] + sigma[None, :] * rng.standard_normal((n, len(center)))
+    if p_dnf is not None:
+        sim = sim + 1e6 * (rng.random((n, len(center))) < np.asarray(p_dnf)[None, :])
     rank = sim.argsort(axis=1).argsort(axis=1)
     return (rank == 0).mean(axis=0), (rank < 3).mean(axis=0)
 
@@ -49,8 +73,9 @@ class FeatureBuilder:
 
     def __init__(self, features: pd.DataFrame):
         self.features = features
-        self._races = (features[features["session"] == "Race"]
-                       [["year", "round", "driver", "team", "position"]].dropna(subset=["position"]))
+        races = features[features["session"] == "Race"].dropna(subset=["position"])
+        self._races = races[["year", "round", "driver", "team", "position"]].assign(
+            dnf=~finished(races["status"].fillna("")))
         self._weekends: dict[tuple[int, int], Weekend] = {}
         self._cache: dict[tuple[int, int, int], pd.DataFrame] = {}
 
@@ -65,6 +90,12 @@ class FeatureBuilder:
         keys = keys[_is_before(keys, year, round_number)]
         return sorted(map(tuple, keys.to_numpy().tolist()))
 
+    def result(self, year: int, round_number: int) -> pd.DataFrame:
+        """Race result (driver, position, dnf). Callers must only ask about weekends that are
+        already over relative to what they predict - i.e. from ``weekends_before``."""
+        r = self._races[(self._races["year"] == year) & (self._races["round"] == round_number)]
+        return r[["driver", "position", "dnf"]].reset_index(drop=True)
+
     def matrix(self, year: int, round_number: int, k: int, with_target: bool = False) -> pd.DataFrame:
         key = (year, round_number, k)
         if key not in self._cache:
@@ -72,19 +103,34 @@ class FeatureBuilder:
         m = self._cache[key]
         if not with_target:
             return m
-        actual = (self._races[(self._races["year"] == year) & (self._races["round"] == round_number)]
-                  .set_index("driver")["position"])
+        actual = self.result(year, round_number).set_index("driver")["position"]
         return m.assign(actual=m["driver"].map(actual))
+
+    def dnf_prob(self, year: int, round_number: int, teams) -> np.ndarray:
+        """Retirement chance per team: its rate so far this season, shrunk toward the retirement
+        rate of every earlier race (team names and cars change between seasons, so earlier
+        seasons only set the prior)."""
+        before = self._races[_is_before(self._races, year, round_number)]
+        if before.empty:
+            return np.full(len(teams), 0.1)
+        overall = before["dnf"].mean()
+        season = before[before["year"] == year].groupby("team")["dnf"].agg(["sum", "count"])
+        return np.array([
+            (season.loc[t, "sum"] + DNF_SHRINK * overall) / (season.loc[t, "count"] + DNF_SHRINK)
+            if t in season.index else overall for t in teams])
 
     def _build(self, year: int, round_number: int, k: int) -> pd.DataFrame:
         cutoff = Cutoff(self.weekend(year, round_number), k)
         vis = apply_cutoff(self.features, cutoff)          # the ONLY rows of this weekend we touch
         if vis.empty:
-            return pd.DataFrame(columns=["driver", "team", "team_color", *FEATURES])
+            return pd.DataFrame(columns=["driver", "team", "team_color", "sq_rank", *FEATURES])
 
         practice = vis[vis["session"].str.startswith("Practice")].copy()
         practice["gap_pct"] = practice["gap_to_best_s"] / (practice["best_lap_s"] - practice["gap_to_best_s"])
-        quali = vis[vis["session"] == "Qualifying"]
+        quali = vis[vis["session"] == "Qualifying"].set_index("driver")
+        # Sprint qualifying has no classified position in the feed, so its order is best-lap rank.
+        sprint_quali = vis[vis["session"].isin(SPRINT_QUALI)].set_index("driver")
+        sprint = vis[vis["session"] == "Sprint"].set_index("driver")
 
         last = vis.sort_values("session_idx").groupby("driver").last()
         out = pd.DataFrame({"driver": last.index, "team": last["team"].to_numpy(),
@@ -92,9 +138,13 @@ class FeatureBuilder:
         out["prac_rank"] = practice.groupby("driver")["pace_rank"].mean()
         out["prac_gap_pct"] = practice.groupby("driver")["gap_pct"].mean()
         out["lr_rank"] = practice.groupby("driver")["longrun_rank"].mean()
-        out["q_pos"] = quali.set_index("driver")["position"]
-        out["q_gap_pct"] = (quali.set_index("driver")["gap_to_best_s"]
-                            / (quali.set_index("driver")["best_lap_s"] - quali.set_index("driver")["gap_to_best_s"]))
+        out["sq_rank"] = sprint_quali["pace_rank"]
+        out["sprint_pos"] = sprint["position"]
+        # Sprint-qualifying order alone: on 2024-25 sprint weekends it predicted the race better
+        # (Spearman 0.589) than practice pace (0.398) or its average with the Sprint result (0.582).
+        out["sprint_rank"] = out["sq_rank"]
+        out["q_pos"] = quali["position"]
+        out["q_gap_pct"] = quali["gap_to_best_s"] / (quali["best_lap_s"] - quali["gap_to_best_s"])
 
         # Form comes from Race results of *earlier* weekends of the same season only.
         hist = self._races[(self._races["year"] == year) & (self._races["round"] < round_number)]
@@ -102,7 +152,7 @@ class FeatureBuilder:
         drv_hist = hist.groupby("driver")["position"].agg(["sum", "count"])
         out["team_form"] = [self._shrunk(team_hist, t, TEAM_SHRINK) for t in out["team"]]
         out["driver_form"] = [self._shrunk(drv_hist, d, DRIVER_SHRINK) for d in out.index]
-        return out.reset_index()[["driver", "team", "team_color", *FEATURES]]
+        return out.reset_index()[["driver", "team", "team_color", "sq_rank", *FEATURES]]
 
     @staticmethod
     def _shrunk(table: pd.DataFrame, key, m: float) -> float:
@@ -114,11 +164,78 @@ class FeatureBuilder:
 
 def fill_for_model(m: pd.DataFrame) -> pd.DataFrame:
     """Missing rank-like values become 'worse than anyone measured' (a driver with no time set
-    is not mid-field); missing gaps become the field's worst gap."""
+    is not mid-field); missing gaps become the field's worst gap. Without a sprint session the
+    sprint order falls back to practice pace, so the column means "best pre-qualifying order"."""
     x = m[FEATURES].astype(float).copy()
     n = len(m)
-    for c in ("prac_rank", "lr_rank", "q_pos"):
-        x[c] = x[c].fillna(n + 1 if c != "lr_rank" else x["prac_rank"].fillna(n + 1))
+    x["prac_rank"] = x["prac_rank"].fillna(n + 1)
+    x["lr_rank"] = x["lr_rank"].fillna(x["prac_rank"])
+    x["sprint_rank"] = x["sprint_rank"].fillna(x["prac_rank"])
+    x["sprint_pos"] = x["sprint_pos"].fillna(x["sprint_rank"])
+    x["q_pos"] = x["q_pos"].fillna(n + 1)
     for c in ("prac_gap_pct", "q_gap_pct"):
         x[c] = x[c].fillna(x[c].max() if x[c].notna().any() else 0.0)
     return x
+
+
+class SimulatedPredictor:
+    """Base for predictors: subclasses only provide ``_score`` (lower = finishes ahead) for a
+    feature matrix. Turning scores into probabilities is shared and calibrated on the
+    predictor's *own* past mistakes: its point predictions for the previous ``ERROR_WINDOW``
+    weekends (each made without that weekend's result) against what actually happened."""
+
+    name = "?"
+
+    def __init__(self, features: pd.DataFrame | None, builder: FeatureBuilder | None = None):
+        self.builder = builder or FeatureBuilder(features)
+        self._points: dict[tuple[int, int, int], np.ndarray] = {}
+        self._errors: dict[tuple[int, int, int], tuple[float, float]] = {}
+
+    def _score(self, m: pd.DataFrame, year: int, round_number: int, k: int) -> np.ndarray:
+        raise NotImplementedError
+
+    def point(self, year: int, round_number: int, k: int) -> np.ndarray:
+        key = (year, round_number, k)
+        if key not in self._points:
+            m = self.builder.matrix(year, round_number, k)
+            self._points[key] = self._score(m, year, round_number, k) if len(m) else np.array([])
+        return self._points[key]
+
+    def error_model(self, year: int, round_number: int, k: int) -> tuple[float, float]:
+        """(a, b) with expected |error| = a + b * predicted place, among cars that finished,
+        from this predictor's out-of-sample predictions on earlier weekends at the same stage."""
+        key = (year, round_number, k)
+        if key in self._errors:
+            return self._errors[key]
+        place, err = [], []
+        for (y, r) in self.builder.weekends_before(year, round_number)[-ERROR_WINDOW:]:
+            m = self.builder.matrix(y, r, k)
+            if len(m) < 10:
+                continue
+            res = m[["driver"]].assign(score=self.point(y, r, k)).merge(self.builder.result(y, r), on="driver")
+            res = res[~res["dnf"]]
+            place.append(res["score"].rank(method="first").to_numpy())
+            err.append(np.abs(res["position"].rank(method="first").to_numpy() - place[-1]))
+        if sum(map(len, place)) < 100:
+            fit = (FALLBACK_SIGMA / np.sqrt(np.pi / 2), 0.0)
+        else:
+            b, a = np.polyfit(np.concatenate(place), np.concatenate(err), 1)
+            fit = (float(a), float(b))
+        self._errors[key] = fit
+        return fit
+
+    def predict(self, cutoff: Cutoff) -> pd.DataFrame:
+        w, k = cutoff.weekend, cutoff.revealed
+        m = self.builder.matrix(w.year, w.round, k)
+        if m.empty:
+            return pd.DataFrame(columns=OUTPUT)
+        score = self.point(w.year, w.round, k)
+        place = pd.Series(score).rank(method="first").to_numpy()
+        a, b = self.error_model(w.year, w.round, k)
+        sigma = np.maximum(MIN_SIGMA, np.sqrt(np.pi / 2) * (a + b * place))   # |N(0,s)| has mean s*sqrt(2/pi)
+        p_dnf = self.builder.dnf_prob(w.year, w.round, m["team"])
+        p_win, p_pod = simulate(place, sigma, p_dnf)
+        out = m[["driver", "team", "team_color"]].copy()
+        out["score"], out["expected_pos"], out["sigma"], out["p_dnf"] = score, place.astype(int), sigma, p_dnf
+        out["p_win"], out["p_podium"] = p_win, p_pod
+        return out.sort_values("expected_pos").reset_index(drop=True)[OUTPUT]

@@ -86,6 +86,10 @@ def prediction_section(cutoff: Cutoff) -> None:
         st.caption("Ridge minus baseline (Spearman), 95% interval over the races: "
                    + " · ".join(f"{STAGE_LABELS[int(r.stage)]} {r['diff']:+.3f} [{r.lo:+.3f}, {r.hi:+.3f}]"
                                 for _, r in diff.iterrows()))
+        after_q = summary[summary["stage"] == 4].set_index("predictor")
+        st.caption("How good are the percentages? Winner log-loss after Qualifying (lower = better; "
+                   "a uniform guess over 22 cars scores 3.09): "
+                   + " · ".join(f"{p} {v:.2f}" for p, v in after_q["winner_logloss"].items()))
 
 
 def main() -> None:

@@ -190,28 +190,28 @@ def prediction_chart(pred: pd.DataFrame, stage_label: str, predictor: str) -> go
     title = "Predicted race result"
     if pred.empty:
         return empty_figure(title, "No prediction for this weekend")
+    sigma = float(pred["sigma"].mean())
     df = pred.sort_values("p_podium", ascending=False).head(12)
-    sigma = float(df["sigma"].iloc[0])
     fig = go.Figure(go.Bar(
         y=df["driver"], x=df["p_podium"] * 100, orientation="h",
         marker=dict(color=[c if isinstance(c, str) else FALLBACK for c in df["team_color"]],
                     cornerradius=4, line=dict(color=SURFACE, width=2)),
         text=[f"{p:.0%} podium · {w:.0%} win" for p, w in zip(df["p_podium"], df["p_win"])],
         textposition="outside", cliponaxis=False, textfont=dict(color=INK_2, size=11),
-        customdata=np.stack([df["team"].fillna(""), df["expected_pos"]], axis=-1),
+        customdata=np.stack([df["team"].fillna(""), df["expected_pos"], (df["p_dnf"] * 100).round()], axis=-1),
         hovertemplate=("<b>%{y}</b> · %{customdata[0]}<br>Expected finish P%{customdata[1]}"
-                       "<br>Podium %{x:.0f}%<extra></extra>"),
+                       "<br>Podium %{x:.0f}%<br>Retirement chance %{customdata[2]}%<extra></extra>"),
     ))
-    fig = _style(fig, title, f"{predictor} · after {stage_label} · typical error ±{sigma:.1f} places", len(df))
+    fig = _style(fig, title, f"{predictor} · after {stage_label} · finishers typically ±{sigma:.1f} places", len(df))
     fig.update_xaxes(title="podium probability (%)", range=[0, 118])
     return fig
 
 
 def uncertainty_chart(preds: pd.DataFrame, stage_labels: dict[int, str], current_stage: int) -> go.Figure:
-    """How the typical error (sigma, in finishing places) shrinks as sessions are revealed.
+    """How the typical error (mean sigma over the field, in places) shrinks as sessions are revealed.
     Only stages up to ``current_stage`` are drawn, so the chart cannot show the future."""
     title = "How sure is the prediction?"
-    d = (preds[preds["stage"] <= current_stage].groupby("stage")["sigma"].first().sort_index())
+    d = (preds[preds["stage"] <= current_stage].groupby("stage")["sigma"].mean().sort_index())
     if d.empty:
         return empty_figure(title, "Run a session to see it")
     fig = go.Figure(go.Scatter(
@@ -220,8 +220,8 @@ def uncertainty_chart(preds: pd.DataFrame, stage_labels: dict[int, str], current
         line=dict(color=ACCENT, width=3), marker=dict(size=9, color=ACCENT),
         hovertemplate="%{x}<br>typical error ±%{y:.2f} places<extra></extra>",
     ))
-    fig = _style(fig, title, "typical error of the finishing order, in places (lower = surer)", 6)
-    fig.update_yaxes(autorange=True, showgrid=True, gridcolor=GRID, range=[0, float(d.max()) * 1.3],
+    fig = _style(fig, title, "typical error for cars that finish, in places (lower = surer)", 6)
+    fig.update_yaxes(autorange=False, showgrid=True, gridcolor=GRID, range=[0, float(d.max()) * 1.3],
                      title="± places", tickfont=dict(color=INK_3))
     fig.update_xaxes(showgrid=False, categoryorder="array", categoryarray=[stage_labels[s] for s in sorted(stage_labels)])
     return fig
@@ -242,6 +242,7 @@ def backtest_chart(summary: pd.DataFrame, stage_labels: dict[int, str], metric: 
                     textfont=dict(color=INK_2, size=11))
     fig = _style(fig, title, "Spearman correlation with the real finishing order, mean over 2026 races (higher = better)",
                  6, legend=True)
-    fig.update_layout(barmode="group", bargap=0.25)
-    fig.update_yaxes(autorange=True, showgrid=True, gridcolor=GRID, range=[0, 1], tickfont=dict(color=INK_3))
+    fig.update_layout(barmode="group", bargap=0.25, margin=dict(b=90),
+                      legend=dict(orientation="h", y=-0.22, yanchor="top", x=0, xanchor="left"))
+    fig.update_yaxes(autorange=False, showgrid=True, gridcolor=GRID, range=[0, 1.08], tickfont=dict(color=INK_3))
     return fig

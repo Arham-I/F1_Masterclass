@@ -22,26 +22,47 @@ see sessions that have already "happened". The Race is never revealed. Each sess
 ## Prediction and backtest
 
 After each revealed session the app shows podium and win probabilities plus a typical-error
-figure that shrinks as the weekend goes on (before Qualifying there is no grid, so the guess is
+figure (for cars that finish) that shrinks as the weekend goes on (before Qualifying there is no grid, so the guess is
 much less certain).
 
-- **Baseline:** finish where you qualify; before Qualifying, where practice pace ranks you.
-- **Model:** ridge regression on relative features (pace ranks and gaps, long-run rank, in-season
-  team and driver form), trained on earlier races only, one model per stage.
+- **Baseline:** finish in the most recent competitive order: Qualifying once it has run; on a
+  sprint weekend before that, Sprint Qualifying (the sprint grid); otherwise practice pace.
+- **Model:** ridge regression on relative features (pace ranks and gaps, long-run rank, sprint
+  order and result, in-season team and driver form), trained on earlier races only, one model
+  per stage.
+- **Probabilities:** each driver may retire (team's retirement rate so far this season, shrunk
+  toward the long-run rate), and the rest finish in predicted order plus noise that grows down
+  the order. The noise is fitted to each predictor's *own* out-of-sample errors on the previous
+  40 weekends, not to its training fit.
 - **Backtest:** expanding window over all 14 completed 2026 races, each predicted using only its
   own already-revealed sessions plus earlier races' results. Tests scramble everything a
-  predictor must not see and assert the output doesn't change.
+  predictor must not see (later sessions, the race itself, later weekends, retirements) and
+  assert the output doesn't change.
 
-**Result (Spearman with the real finishing order, mean of 14 races):** the model does **not** beat
-the baseline. After Qualifying the baseline scores 0.73 vs 0.71 (model minus baseline -0.016,
-95% interval excludes zero); before Qualifying the model is ahead by 0.00 to 0.02, inside the
-noise. The model's podium probabilities are also worse calibrated (Brier) at every stage. So the
-baseline is the default and the model is selectable for comparison. With 14 races the intervals are
-wide; a larger effect could hide inside them. I tried ridge only; no LightGBM (scikit-learn/LightGBM
-are not installed, and ~2k rows with 7 features doesn't call for it).
+**Result (mean of 14 races, after Qualifying):**
 
-Known gaps: on sprint weekends stages 2-3 are Sprint Qualifying and Sprint, whose results are
-not used as features. Race noise (crashes, safety cars) is modelled as independent per driver.
+| | Spearman with real order | Winner log-loss | Podium Brier |
+|---|---|---|---|
+| Baseline (default) | **0.726** | 1.19 | **0.061** |
+| Ridge, all seasons | 0.716 | **1.12** | 0.069 |
+| Ridge, 2026 only | 0.713 | 1.26 | 0.061 |
+
+The model does **not** beat the baseline on finishing order: -0.010 after Qualifying, 95%
+interval [-0.025, +0.007]; before Qualifying it is up to +0.02 ahead, also inside the noise.
+Its probabilities are mixed (better winner log-loss, worse podium Brier), so the baseline stays
+the default and the model is selectable for comparison. With 14 races the intervals are wide.
+I also tried LightGBM (regression and lambdarank), random forests, other ridge penalties and
+energy-management features built from speed traps; none beat the baseline.
+
+What did help was the probability model. Replacing one error size for every driver with
+retirements plus order-dependent noise cut the baseline's winner log-loss after Qualifying from
+1.45 to 1.19 (ridge: 1.56 to 1.12). Before, the pole sitter was always given about 29% to win;
+now about 46% (in 2026 the pole sitter won 9 of 14).
+Sprint Qualifying beat practice pace as a guide on 2024-25 sprint weekends (0.59 vs 0.40); on
+2026's five sprint weekends it was better in four and worse in one, and level on average.
+
+Known gaps: race incidents (crashes, safety cars) are independent per driver; the pole sitter is
+still slightly under-rated.
 
 Regenerate with `python scripts/backtest.py` (needs scipy from requirements-dev.txt).
 

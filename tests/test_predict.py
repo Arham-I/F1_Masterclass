@@ -11,12 +11,13 @@ import pytest
 from f1cc import backtest_summary as bts
 from f1cc import store
 from f1cc.predict import BaselinePredictor, FeatureBuilder, RidgePredictor, simulate
-from f1cc.predict.base import FEATURES
+from f1cc.predict.base import FEATURES, OUTPUT
 from f1cc.replay import Cutoff
 
 pytestmark = pytest.mark.skipif(not store.available_years("features"), reason="needs data/*.parquet")
 
 YEAR, ROUND = 2026, 14
+SPRINT_ROUND = 12                                          # FP1, Sprint Qualifying, Sprint, Qualifying
 NUMERIC = ["position", "best_lap_s", "gap_to_best_s", "pace_rank", "longrun_rank", "q1_s", "q2_s", "q3_s"]
 
 
@@ -26,17 +27,18 @@ def features():
 
 
 def _scramble(df: pd.DataFrame, mask: pd.Series, seed: int = 1) -> pd.DataFrame:
-    """Replace numeric values in the masked rows with random junk."""
+    """Replace numeric values and finishing status in the masked rows with random junk."""
     rng = np.random.default_rng(seed)
     out = df.copy()
     for c in NUMERIC:
         out.loc[mask, c] = rng.uniform(1, 20, mask.sum())
+    out.loc[mask, "status"] = rng.choice(["Finished", "Retired"], mask.sum())
     return out
 
 
-def _run(predictor_cls, features, k, **kw):
+def _run(predictor_cls, features, k, rnd=ROUND, **kw):
     b = FeatureBuilder(features)
-    return predictor_cls(features, b, **kw).predict(Cutoff(b.weekend(YEAR, ROUND), k))
+    return predictor_cls(features, b, **kw).predict(Cutoff(b.weekend(YEAR, rnd), k))
 
 
 def _same(a: pd.DataFrame, b: pd.DataFrame):
@@ -58,6 +60,40 @@ def test_prediction_ignores_sessions_after_the_cutoff(features, predictor_cls, k
     mask = ((features["year"] == YEAR) & (features["round"] == ROUND) & features["session"].isin(later))
     assert mask.any()
     _same(_run(predictor_cls, features, k), _run(predictor_cls, _scramble(features, mask), k))
+
+
+@pytest.mark.parametrize("predictor_cls", [BaselinePredictor, RidgePredictor])
+@pytest.mark.parametrize("k", [1, 2, 3])
+def test_sprint_weekend_prediction_ignores_later_sessions_and_the_race(features, predictor_cls, k):
+    b = FeatureBuilder(features)
+    later = b.weekend(YEAR, SPRINT_ROUND).replayable[k:] + ("Race",)
+    mask = ((features["year"] == YEAR) & (features["round"] == SPRINT_ROUND) & features["session"].isin(later))
+    _same(_run(predictor_cls, features, k, SPRINT_ROUND),
+          _run(predictor_cls, _scramble(features, mask), k, SPRINT_ROUND))
+
+
+def test_sprint_qualifying_moves_the_baseline_before_qualifying(features):
+    b = FeatureBuilder(features)
+    p = BaselinePredictor(features, b)
+    assert b.weekend(YEAR, SPRINT_ROUND).replayable[1] == "Sprint Qualifying"
+    assert b.matrix(YEAR, SPRINT_ROUND, 1)["sprint_rank"].isna().all()
+    assert b.matrix(YEAR, SPRINT_ROUND, 2)["sprint_rank"].notna().any()
+    assert not np.array_equal(p.point(YEAR, SPRINT_ROUND, 1).argsort(), p.point(YEAR, SPRINT_ROUND, 2).argsort())
+
+
+def test_retirement_chance_uses_this_seasons_earlier_races_only(features):
+    b = FeatureBuilder(features)
+    teams = b.matrix(YEAR, ROUND, 4)["team"]
+    p = b.dnf_prob(YEAR, ROUND, teams)
+    assert ((p > 0) & (p < 1)).all()
+    later = (features["year"] == YEAR) & (features["round"] >= ROUND)
+    np.testing.assert_array_equal(p, FeatureBuilder(_scramble(features, later)).dnf_prob(YEAR, ROUND, teams))
+
+
+def test_noise_is_fitted_on_earlier_weekends_only(features):
+    later = (features["year"] == YEAR) & (features["round"] >= ROUND)
+    fit = lambda f: RidgePredictor(f, FeatureBuilder(f)).error_model(YEAR, ROUND, 4)
+    assert fit(features) == fit(_scramble(features, later))
 
 
 @pytest.mark.parametrize("predictor_cls", [BaselinePredictor, RidgePredictor])
@@ -99,6 +135,17 @@ def test_probabilities_are_coherent():
     assert win[0] > win[5] > win[15]                       # better score -> more likely to win
     tight, _ = simulate(score, sigma=0.1)
     assert tight[0] > win[0]                               # less noise -> more certain
+    p_dnf = np.zeros(20); p_dnf[0] = 1.0
+    out, out_pod = simulate(score, sigma=np.linspace(1, 4, 20), p_dnf=p_dnf)
+    assert out[0] == 0 and out_pod[0] == 0                 # a certain retirement never wins
+    assert out.sum() == pytest.approx(1.0) and out_pod.sum() == pytest.approx(3.0)
+
+
+def test_prediction_output_shape(features):
+    out = _run(BaselinePredictor, features, 4)
+    assert list(out.columns) == OUTPUT
+    assert (out["sigma"] > 0).all() and out["p_dnf"].between(0, 1).all()
+    assert sorted(out["expected_pos"]) == list(range(1, len(out) + 1))
 
 
 def test_stored_predictions_match_a_live_prediction(features):
@@ -109,7 +156,7 @@ def test_stored_predictions_match_a_live_prediction(features):
     live = BaselinePredictor(features, b).predict(Cutoff(b.weekend(YEAR, ROUND), 2))
     keep = stored[(stored["round"] == ROUND) & (stored["stage"] == 2)
                   & (stored["predictor"] == BaselinePredictor.name)]
-    cols = ["driver", "score", "sigma", "p_win", "p_podium"]
+    cols = ["driver", "score", "sigma", "p_dnf", "p_win", "p_podium"]
     pd.testing.assert_frame_equal(live[cols].reset_index(drop=True), keep[cols].reset_index(drop=True))
 
 
