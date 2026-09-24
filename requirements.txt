@@ -1,0 +1,7 @@
+# Runtime for the deployed app. FastF1 is NOT needed to serve the demo:
+# the app reads only the derived parquet files in data/.
+streamlit>=1.64
+plotly>=5.24
+pandas>=2.2,<3
+pyarrow>=17
+numpy>=1.26

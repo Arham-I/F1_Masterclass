@@ -1,0 +1,4 @@
+-r requirements.txt
+# Only needed to (re)build data/*.parquet and run tests.
+fastf1==3.8.3
+pytest>=8
