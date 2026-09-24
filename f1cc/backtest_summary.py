@@ -6,8 +6,8 @@ import numpy as np
 import pandas as pd
 
 BASELINE = "Baseline (grid, else practice pace)"
-METRICS = ["spearman", "top3_overlap", "winner_hit", "mae_pos", "winner_logloss", "podium_brier"]
-LOWER_IS_BETTER = {"mae_pos", "winner_logloss", "podium_brier"}
+METRICS = ["spearman", "top3_overlap", "winner_hit", "mae_pos", "winner_logloss", "podium_brier", "rps"]
+LOWER_IS_BETTER = {"mae_pos", "winner_logloss", "podium_brier", "rps"}
 
 
 def summarize(bt: pd.DataFrame) -> pd.DataFrame:

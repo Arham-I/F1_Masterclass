@@ -35,7 +35,8 @@ SPRINT_QUALI = ("Sprint Qualifying", "Sprint Shootout")
 FINISHED = ("Finished", "Lapped")
 FEATURES = ["prac_rank", "prac_gap_pct", "lr_rank", "sprint_rank", "sprint_pos", "q_pos", "q_gap_pct",
             "team_form", "driver_form"]
-OUTPUT = ["driver", "team", "team_color", "score", "expected_pos", "sigma", "p_dnf", "p_win", "p_podium"]
+OUTPUT = ["driver", "team", "team_color", "score", "expected_pos", "sigma", "p_dnf", "p_win", "p_podium",
+          "p_pos"]         # p_pos: list of chances of finishing P1..Pn
 
 
 class Predictor(Protocol):
@@ -51,9 +52,16 @@ def finished(status: pd.Series) -> pd.Series:
 
 def simulate(center: np.ndarray, sigma, p_dnf: np.ndarray | None = None, n: int = 20000,
              seed: int = 0) -> tuple[np.ndarray, np.ndarray]:
-    """Win and podium probabilities. Each run: every driver retires with probability ``p_dnf``
-    (and drops to the back); the rest finish in order of ``center`` plus Gaussian noise of size
-    ``sigma`` (a scalar or one value per driver, in places)."""
+    """Win and podium probabilities (see :func:`position_distribution`)."""
+    dist = position_distribution(center, sigma, p_dnf, n, seed)
+    return dist[:, 0], dist[:, :3].sum(axis=1)
+
+
+def position_distribution(center: np.ndarray, sigma, p_dnf: np.ndarray | None = None,
+                          n: int = 20000, seed: int = 0) -> np.ndarray:
+    """``[driver, position]`` probabilities. Each run: every driver retires with probability
+    ``p_dnf`` (and drops to the back); the rest finish in order of ``center`` plus Gaussian noise
+    of size ``sigma`` (a scalar or one value per driver, in places)."""
     rng = np.random.default_rng(seed)
     center = np.asarray(center, dtype=float)
     sigma = np.broadcast_to(np.asarray(sigma, dtype=float), center.shape)
@@ -61,7 +69,17 @@ def simulate(center: np.ndarray, sigma, p_dnf: np.ndarray | None = None, n: int 
     if p_dnf is not None:
         sim = sim + 1e6 * (rng.random((n, len(center))) < np.asarray(p_dnf)[None, :])
     rank = sim.argsort(axis=1).argsort(axis=1)
-    return (rank == 0).mean(axis=0), (rank < 3).mean(axis=0)
+    return np.stack([(rank == p).mean(axis=0) for p in range(len(center))], axis=1)
+
+
+def rps(dist: np.ndarray, actual_place: np.ndarray) -> float:
+    """Ranked probability score over the whole grid (0 = perfect, lower is better): for every
+    driver, how far the predicted cumulative chance of finishing P1..Pn is from what happened.
+    Unlike win log-loss it rewards 'about P8' for a P9 finish and punishes it for a P18."""
+    n = dist.shape[1]
+    idx = np.clip(np.asarray(actual_place, dtype=int), 1, n) - 1
+    observed = (np.arange(n)[None, :] >= idx[:, None]).astype(float)
+    return float((((dist.cumsum(axis=1) - observed) ** 2).sum(axis=1) / (n - 1)).mean())
 
 
 def _is_before(df: pd.DataFrame, year: int, round_number: int) -> pd.Series:
@@ -224,18 +242,28 @@ class SimulatedPredictor:
         self._errors[key] = fit
         return fit
 
+    def _center(self, m: pd.DataFrame, place: np.ndarray, year: int, round_number: int, k: int) -> np.ndarray:
+        """Where each driver sits in the simulation, in places. Default: the predicted place."""
+        return place
+
+    def noise(self, year: int, round_number: int, k: int):
+        """(matrix, score, place, sigma, p_dnf) for a weekend - everything the simulation needs
+        except the centre."""
+        m = self.builder.matrix(year, round_number, k)
+        score = self.point(year, round_number, k)
+        place = pd.Series(score).rank(method="first").to_numpy()
+        a, b = self.error_model(year, round_number, k)
+        sigma = np.maximum(MIN_SIGMA, np.sqrt(np.pi / 2) * (a + b * place))   # |N(0,s)| has mean s*sqrt(2/pi)
+        return m, score, place, sigma, self.builder.dnf_prob(year, round_number, m["team"])
+
     def predict(self, cutoff: Cutoff) -> pd.DataFrame:
         w, k = cutoff.weekend, cutoff.revealed
-        m = self.builder.matrix(w.year, w.round, k)
-        if m.empty:
+        if self.builder.matrix(w.year, w.round, k).empty:
             return pd.DataFrame(columns=OUTPUT)
-        score = self.point(w.year, w.round, k)
-        place = pd.Series(score).rank(method="first").to_numpy()
-        a, b = self.error_model(w.year, w.round, k)
-        sigma = np.maximum(MIN_SIGMA, np.sqrt(np.pi / 2) * (a + b * place))   # |N(0,s)| has mean s*sqrt(2/pi)
-        p_dnf = self.builder.dnf_prob(w.year, w.round, m["team"])
-        p_win, p_pod = simulate(place, sigma, p_dnf)
+        m, score, place, sigma, p_dnf = self.noise(w.year, w.round, k)
+        dist = position_distribution(self._center(m, place, w.year, w.round, k), sigma, p_dnf)
         out = m[["driver", "team", "team_color"]].copy()
         out["score"], out["expected_pos"], out["sigma"], out["p_dnf"] = score, place.astype(int), sigma, p_dnf
-        out["p_win"], out["p_podium"] = p_win, p_pod
+        out["p_win"], out["p_podium"] = dist[:, 0], dist[:, :3].sum(axis=1)
+        out["p_pos"] = list(dist)
         return out.sort_values("expected_pos").reset_index(drop=True)[OUTPUT]

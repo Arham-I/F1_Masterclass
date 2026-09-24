@@ -14,6 +14,7 @@ from scipy.stats import spearmanr
 
 from f1cc import store
 from f1cc.predict import BaselinePredictor, FeatureBuilder, RidgePredictor
+from f1cc.predict.base import rps
 from f1cc.replay import Cutoff
 
 warnings.filterwarnings("ignore")
@@ -22,6 +23,7 @@ STAGES = (1, 2, 3, 4)
 
 def metrics(pred: pd.DataFrame, actual: pd.Series) -> dict:
     p = pred.assign(actual=pred["driver"].map(actual)).dropna(subset=["actual"])
+    dist = np.stack(p["p_pos"].to_numpy())
     winner = p.loc[p["actual"].idxmin()]
     top3_actual = set(p.nsmallest(3, "actual")["driver"])
     top3_pred = set(p.nsmallest(3, "score")["driver"])
@@ -33,6 +35,7 @@ def metrics(pred: pd.DataFrame, actual: pd.Series) -> dict:
         "mae_pos": float((p["expected_pos"] - p["actual"]).abs().mean()),
         "winner_logloss": float(-np.log(max(winner["p_win"], 1e-4))),
         "podium_brier": float(((p["p_podium"] - (p["actual"] <= 3)) ** 2).mean()),
+        "rps": rps(dist, p["actual"].rank(method="first").to_numpy()),
     }
 
 

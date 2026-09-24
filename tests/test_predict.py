@@ -11,7 +11,8 @@ import pytest
 from f1cc import backtest_summary as bts
 from f1cc import store
 from f1cc.predict import BaselinePredictor, FeatureBuilder, RidgePredictor, simulate
-from f1cc.predict.base import FEATURES, OUTPUT
+from f1cc.predict.base import FEATURES, OUTPUT, position_distribution, rps
+from f1cc.predict.baseline import TIME_WEIGHT
 from f1cc.replay import Cutoff
 
 pytestmark = pytest.mark.skipif(not store.available_years("features"), reason="needs data/*.parquet")
@@ -141,6 +142,51 @@ def test_probabilities_are_coherent():
     assert out.sum() == pytest.approx(1.0) and out_pod.sum() == pytest.approx(3.0)
 
 
+def test_position_distribution_is_a_proper_distribution():
+    dist = position_distribution(np.arange(1, 21, dtype=float), np.linspace(1, 4, 20), np.full(20, 0.1))
+    np.testing.assert_allclose(dist.sum(axis=1), 1)        # every driver finishes somewhere
+    np.testing.assert_allclose(dist.sum(axis=0), 1)        # every position is taken by someone
+    win, pod = simulate(np.arange(1, 21, dtype=float), np.linspace(1, 4, 20), np.full(20, 0.1))
+    np.testing.assert_allclose(win, dist[:, 0])
+    np.testing.assert_allclose(pod, dist[:, :3].sum(axis=1))
+
+
+def test_rps_rewards_near_misses_over_far_misses():
+    sure = np.eye(5)                                       # driver i certain to finish P(i+1)
+    assert rps(sure, np.arange(1, 6)) == 0
+    near, far = np.arange(1, 6), np.array([5, 2, 3, 4, 1])
+    assert 0 < rps(sure, np.array([2, 1, 3, 4, 5])) < rps(sure, far)
+    assert rps(sure, near) < rps(sure, far)
+
+
+def test_time_scale_only_after_qualifying_and_never_reorders(features):
+    b = FeatureBuilder(features)
+    p = BaselinePredictor(features, b)
+    for k in (1, 2, 3):                                    # no qualifying yet: simulate on grid places
+        m, _, place, _, _ = p.noise(YEAR, ROUND, k)
+        np.testing.assert_array_equal(p._center(m, place, YEAR, ROUND, k), place)
+    m, _, place, _, _ = p.noise(YEAR, ROUND, 4)
+    center = p._center(m, place, YEAR, ROUND, 4)
+    assert not np.allclose(center, place)                  # gaps are used after qualifying
+    assert np.corrcoef(center, place)[0, 1] > 0.95
+    plain = BaselinePredictor(features, b)
+    plain._center = lambda m, place, *a: place
+    live = p.predict(Cutoff(b.weekend(YEAR, ROUND), 4))
+    np.testing.assert_array_equal(live["driver"], plain.predict(Cutoff(b.weekend(YEAR, ROUND), 4))["driver"])
+
+
+def test_close_qualifying_gap_means_closer_race_odds(features):
+    """The time scale's whole point: the pole sitter's edge over P2 depends on the gap."""
+    b = FeatureBuilder(features)
+    p = BaselinePredictor(features, b)
+    m, _, place, sigma, p_dnf = p.noise(YEAR, ROUND, 4)
+    center = p._center(m, place, YEAR, ROUND, 4)
+    gap = p._gaps(m)
+    p2 = int(np.flatnonzero(place == 2)[0])
+    w = TIME_WEIGHT
+    assert center[p2] == pytest.approx((1 - w) * 2 + w * (1 + gap[p2] / p._pct_per_place(YEAR, ROUND, 4)))
+
+
 def test_prediction_output_shape(features):
     out = _run(BaselinePredictor, features, 4)
     assert list(out.columns) == OUTPUT
@@ -153,11 +199,12 @@ def test_stored_predictions_match_a_live_prediction(features):
     if stored.empty:
         pytest.skip("run scripts/backtest.py first")
     b = FeatureBuilder(features)
-    live = BaselinePredictor(features, b).predict(Cutoff(b.weekend(YEAR, ROUND), 2))
-    keep = stored[(stored["round"] == ROUND) & (stored["stage"] == 2)
-                  & (stored["predictor"] == BaselinePredictor.name)]
-    cols = ["driver", "score", "sigma", "p_dnf", "p_win", "p_podium"]
-    pd.testing.assert_frame_equal(live[cols].reset_index(drop=True), keep[cols].reset_index(drop=True))
+    for stage in (2, 4):                                   # 4 exercises the time scale
+        live = BaselinePredictor(features, b).predict(Cutoff(b.weekend(YEAR, ROUND), stage))
+        keep = stored[(stored["round"] == ROUND) & (stored["stage"] == stage)
+                      & (stored["predictor"] == BaselinePredictor.name)]
+        cols = ["driver", "score", "sigma", "p_dnf", "p_win", "p_podium"]
+        pd.testing.assert_frame_equal(live[cols].reset_index(drop=True), keep[cols].reset_index(drop=True))
 
 
 def test_backtest_covers_every_race_and_stage():
