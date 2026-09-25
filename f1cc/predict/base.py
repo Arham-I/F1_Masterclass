@@ -35,6 +35,7 @@ SPRINT_QUALI = ("Sprint Qualifying", "Sprint Shootout")
 FINISHED = ("Finished", "Lapped")
 FEATURES = ["prac_rank", "prac_gap_pct", "lr_rank", "sprint_rank", "sprint_pos", "q_pos", "q_gap_pct",
             "team_form", "driver_form"]
+EXTRA_COLUMNS = ["tm_delta", "new_soft", "prac_rank_w", "prac_gap_pct_w"]
 OUTPUT = ["driver", "team", "team_color", "score", "expected_pos", "sigma", "p_dnf", "p_win", "p_podium",
           "p_pos"]         # p_pos: list of chances of finishing P1..Pn
 
@@ -141,7 +142,7 @@ class FeatureBuilder:
         cutoff = Cutoff(self.weekend(year, round_number), k)
         vis = apply_cutoff(self.features, cutoff)          # the ONLY rows of this weekend we touch
         if vis.empty:
-            return pd.DataFrame(columns=["driver", "team", "team_color", "sq_rank", *FEATURES])
+            return pd.DataFrame(columns=["driver", "team", "team_color", "sq_rank", *FEATURES, *EXTRA_COLUMNS])
         # FP1 stand-ins (e.g. rookies in their mandatory FP1 outing) do not race. A driver seen
         # only in the first session is a stand-in when his team has already fielded two *other*
         # drivers since - not merely because he missed a later session (crash repairs, a wet FP2).
@@ -174,13 +175,31 @@ class FeatureBuilder:
         out["q_pos"] = quali["position"]
         out["q_gap_pct"] = quali["gap_to_best_s"] / (quali["best_lap_s"] - quali["gap_to_best_s"])
 
+        # Extra inputs some predictors use once Qualifying is visible (see model.py for which,
+        # and docs/day2-model-notes.md for the test that selected them).
+        q_gap = out["q_gap_pct"] * 100
+        mate = q_gap.groupby(out["team"]).transform("sum") - q_gap
+        n_timed = q_gap.groupby(out["team"]).transform("count")
+        out["tm_delta"] = (q_gap - mate).where(n_timed == 2)             # + = slower than teammate
+        if "new_soft_sets" in vis:
+            sets = vis.groupby("driver")["new_soft_sets"].sum()
+            out["new_soft"] = sets - sets.median()                    # new softs already used, vs field
+        else:
+            out["new_soft"] = np.nan
+        out["prac_rank_w"], out["prac_gap_pct_w"] = out["prac_rank"], out["prac_gap_pct"]
+        if len(quali) and len(practice):                              # later practice sessions count more
+            practice["w"] = practice["session"].str[-1].astype(int)   # FP1=1, FP2=2, FP3=3
+            for src, dst in (("pace_rank", "prac_rank_w"), ("gap_pct", "prac_gap_pct_w")):
+                ok = practice.dropna(subset=[src])
+                out[dst] = (ok[src] * ok["w"]).groupby(ok["driver"]).sum() / ok.groupby("driver")["w"].sum()
+
         # Form comes from Race results of *earlier* weekends of the same season only.
         hist = self._races[(self._races["year"] == year) & (self._races["round"] < round_number)]
         team_hist = hist.groupby("team")["position"].agg(["sum", "count"])
         drv_hist = hist.groupby("driver")["position"].agg(["sum", "count"])
         out["team_form"] = [self._shrunk(team_hist, t, TEAM_SHRINK) for t in out["team"]]
         out["driver_form"] = [self._shrunk(drv_hist, d, DRIVER_SHRINK) for d in out.index]
-        return out.reset_index()[["driver", "team", "team_color", "sq_rank", *FEATURES]]
+        return out.reset_index()[["driver", "team", "team_color", "sq_rank", *FEATURES, *EXTRA_COLUMNS]]
 
     @staticmethod
     def _shrunk(table: pd.DataFrame, key, m: float) -> float:
@@ -203,6 +222,12 @@ def fill_for_model(m: pd.DataFrame) -> pd.DataFrame:
     x["q_pos"] = x["q_pos"].fillna(n + 1)
     for c in ("prac_gap_pct", "q_gap_pct"):
         x[c] = x[c].fillna(x[c].max() if x[c].notna().any() else 0.0)
+    if "prac_rank_w" in m:
+        x["prac_rank_w"] = m["prac_rank_w"].astype(float).fillna(n + 1).to_numpy()
+        w_gap = m["prac_gap_pct_w"].astype(float)
+        x["prac_gap_pct_w"] = w_gap.fillna(w_gap.max() if w_gap.notna().any() else 0.0).to_numpy()
+        for c in ("tm_delta", "new_soft"):
+            x[c] = m[c].astype(float).fillna(0.0).to_numpy()         # relative inputs: missing = average
     return x
 
 

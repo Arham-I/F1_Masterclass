@@ -13,6 +13,14 @@ from .base import FEATURES, FeatureBuilder, SimulatedPredictor, fill_for_model
 from .baseline import BaselinePredictor
 
 ALPHA = 10.0
+
+# Inputs added once Qualifying is visible, per ridge flavour. Chosen on 2023-26 by whether they
+# improved the second half of seasons (see docs/day2-model-notes.md): gains are small (~0.002-0.004
+# Spearman) and the Auto rule still decides race by race whether ridge is used at all.
+#   all seasons:  + gap to teammate in qualifying
+#   same season:  + new soft sets used before the race, practice pace weighted FP1x1/FP2x2/FP3x3
+AFTER_Q = {False: dict(extra=["tm_delta"], weighted_pace=False),
+           True: dict(extra=["new_soft"], weighted_pace=True)}
 MIN_ROWS = 40              # below this, no fit is better than a wild one: fall back to the baseline
 
 
@@ -39,11 +47,19 @@ class RidgePredictor(SimulatedPredictor):
             return pd.DataFrame(columns=FEATURES), np.array([])
         return pd.concat([x for x, _ in rows], ignore_index=True), np.concatenate([t for _, t in rows])
 
+    def feature_names(self, m: pd.DataFrame) -> list[str]:
+        if m["q_pos"].isna().all():
+            return list(FEATURES)
+        cfg = AFTER_Q[self.same_year_only]
+        base = [{"prac_rank": "prac_rank_w", "prac_gap_pct": "prac_gap_pct_w"}.get(c, c) if cfg["weighted_pace"] else c
+                for c in FEATURES]
+        return base + cfg["extra"]
+
     def _score(self, m: pd.DataFrame, year: int, round_number: int, k: int) -> np.ndarray:
         X, y = self._training(year, round_number, k)
         if len(y) < MIN_ROWS:
             return BaselinePredictor.score(m)
-        cols = [c for c in FEATURES if X[c].notna().all() and X[c].std() > 0]
+        cols = [c for c in self.feature_names(m) if X[c].notna().all() and X[c].std() > 0]
         mu, sd = X[cols].mean(), X[cols].std()
         Z = ((X[cols] - mu) / sd).to_numpy()
         coef = np.linalg.solve(Z.T @ Z + self.alpha * np.eye(len(cols)), Z.T @ (y - y.mean()))

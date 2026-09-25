@@ -47,9 +47,9 @@ much less certain).
 | | Spearman with real order | Winner log-loss | Podium Brier | Whole-grid RPS |
 |---|---|---|---|---|
 | Baseline | **0.712** | **1.02** | **0.064** | **0.104** |
-| Auto (default, see below) | 0.707 | 1.03 | 0.065 | 0.105 |
-| Ridge, all seasons | 0.706 | 1.21 | 0.072 | 0.107 |
-| Ridge, 2026 only | 0.703 | 1.34 | 0.064 | 0.107 |
+| Auto (default, see below) | 0.704 | 1.06 | 0.066 | 0.106 |
+| Ridge, all seasons | 0.707 | 1.21 | 0.071 | 0.107 |
+| Ridge, 2026 only | 0.700 | 1.38 | 0.065 | 0.107 |
 
 Lower is better for everything except Spearman. RPS (ranked probability score) grades each
 driver's whole distribution of finishing positions, so it covers the midfield too.
@@ -64,10 +64,22 @@ The app's default is therefore **Auto**: at each stage it uses whichever predict
 record on *this season's earlier races* (the baseline until three races exist), re-decided every
 race. In 2026 it switched to the 2026-only ridge before Qualifying from round 5-7 on and kept the
 baseline after Qualifying. Against always using the baseline: +0.018 after the first session,
-+0.014 after the second (interval above zero), -0.005 after the third and after Qualifying. A
++0.014 after the second (interval above zero), -0.005 after the third and -0.008 after
+Qualifying (it tried ridge there in four early races). A
 race-by-race chart in the app shows how each model's record develops through the season.
 Down-weighting 2022-25 inside the all-seasons ridge (or using it only as a prior) was also tried:
 no season 2023-26 improved.
+
+Features that only pay off later in a season: every rejected feature was retested on 2023-26 by
+whether it helped the *second half* of each season (where an in-season learner has the most
+data), in at least 3 of 4 seasons. Three passed and were added to ridge, after Qualifying only:
+gap to teammate in qualifying (all-seasons ridge), and new soft-tyre sets already used plus
+practice pace weighted towards later sessions (same-season ridge). The gains are small (+0.002 to
++0.004 in second halves, 2026's second half not among the improved) - they are kept as a bet on
+future seasons, with Auto deciding whether ridge is used at all. Rejected: grid penalty, FP2-only
+long runs, recency-weighted form, down-weighting old seasons, and a new driver-at-this-circuit
+history feature (places gained and teammate gap at the same circuit in earlier seasons), which
+made predictions worse in every variant.
 I also tried LightGBM (regression and lambdarank), random forests, other ridge penalties and
 energy-management features built from speed traps; none beat the baseline.
 

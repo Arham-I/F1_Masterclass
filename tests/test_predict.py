@@ -19,7 +19,8 @@ pytestmark = pytest.mark.skipif(not store.available_years("features"), reason="n
 
 YEAR, ROUND = 2026, 14
 SPRINT_ROUND = 12                                          # FP1, Sprint Qualifying, Sprint, Qualifying
-NUMERIC = ["position", "best_lap_s", "gap_to_best_s", "pace_rank", "longrun_rank", "q1_s", "q2_s", "q3_s"]
+NUMERIC = ["position", "best_lap_s", "gap_to_best_s", "pace_rank", "longrun_rank", "q1_s", "q2_s", "q3_s",
+           "new_soft_sets"]
 
 
 @pytest.fixture(scope="module")
@@ -32,6 +33,7 @@ def _scramble(df: pd.DataFrame, mask: pd.Series, seed: int = 1) -> pd.DataFrame:
     rng = np.random.default_rng(seed)
     out = df.copy()
     for c in NUMERIC:
+        out[c] = out[c].astype(float)
         out.loc[mask, c] = rng.uniform(1, 20, mask.sum())
     out.loc[mask, "status"] = rng.choice(["Finished", "Retired"], mask.sum())
     return out
@@ -80,6 +82,30 @@ def test_sprint_qualifying_moves_the_baseline_before_qualifying(features):
     assert b.matrix(YEAR, SPRINT_ROUND, 1)["sprint_rank"].isna().all()
     assert b.matrix(YEAR, SPRINT_ROUND, 2)["sprint_rank"].notna().any()
     assert not np.array_equal(p.point(YEAR, SPRINT_ROUND, 1).argsort(), p.point(YEAR, SPRINT_ROUND, 2).argsort())
+
+
+def test_after_qualifying_extras_only_exist_once_qualifying_is_visible(features):
+    b = FeatureBuilder(features)
+    for k in (1, 2, 3):
+        m = b.matrix(YEAR, ROUND, k)
+        assert m["tm_delta"].isna().all()
+        pd.testing.assert_series_equal(m["prac_rank_w"], m["prac_rank"], check_names=False)
+    m = b.matrix(YEAR, ROUND, 4)
+    assert m["tm_delta"].notna().sum() >= 18                        # most drivers have a timed teammate
+    assert (m["tm_delta"].groupby(m["team"]).sum().abs() < 1e-9).all()   # teammates mirror each other
+    for same_year in (False, True):
+        r = RidgePredictor(features, b, same_year_only=same_year)
+        assert r.feature_names(b.matrix(YEAR, ROUND, 3)) == list(FEATURES)
+        assert r.feature_names(m) != list(FEATURES)
+
+
+def test_new_soft_sets_count_only_visible_sessions(features):
+    b = FeatureBuilder(features)
+    later = ((features["year"] == YEAR) & (features["round"] == ROUND)
+             & features["session"].isin(["Practice 3", "Qualifying", "Race"]))
+    before = b.matrix(YEAR, ROUND, 2)["new_soft"]
+    after = FeatureBuilder(_scramble(features, later)).matrix(YEAR, ROUND, 2)["new_soft"]
+    pd.testing.assert_series_equal(before, after)
 
 
 def test_fp1_stand_ins_leave_once_a_later_session_is_visible(features):

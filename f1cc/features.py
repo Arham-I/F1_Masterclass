@@ -223,6 +223,15 @@ def extract(session, year: int, round_number: int, session_idx: int):
     main = (laps[laps["Compound"].isin(DRY_COMPOUNDS)].groupby("Driver")["Compound"]
             .agg(lambda x: x.mode().iat[0]))
     f["main_compound"] = main
+    # New soft-tyre sets fitted this session (a stint starting on a fresh soft). Sets used before
+    # Sunday are sets the driver no longer has for the race.
+    if {"FreshTyre", "Stint"} <= set(laps.columns):
+        starts = laps.sort_values("LapNumber").groupby(["Driver", "Stint"]).first()
+        fresh_soft = starts[(starts["FreshTyre"] == True) & (starts["Compound"] == "SOFT")]  # noqa: E712
+        f["new_soft_sets"] = fresh_soft.groupby(level="Driver").size().reindex(f.index)
+    else:
+        f["new_soft_sets"] = np.nan
+    f["new_soft_sets"] = f["new_soft_sets"].fillna(0).astype(int)
 
     # Classification / colours from results (may be sparse for practice sessions)
     def _from_res(col, conv=lambda x: x):

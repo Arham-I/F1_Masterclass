@@ -188,9 +188,9 @@ Current standings after Qualifying (2026):
 | | Spearman | Winner log-loss | Podium Brier | RPS |
 |---|---|---|---|---|
 | Baseline | **0.712** | **1.02** | **0.064** | **0.104** |
-| Auto (app default: best record this season) | 0.707 | 1.03 | 0.065 | 0.105 |
-| Ridge, all seasons | 0.706 | 1.21 | 0.072 | 0.107 |
-| Ridge, 2026 only | 0.703 | 1.34 | 0.064 | 0.107 |
+| Auto (app default: best record this season) | 0.704 | 1.06 | 0.066 | 0.106 |
+| Ridge, all seasons | 0.707 | 1.21 | 0.071 | 0.107 |
+| Ridge, 2026 only | 0.700 | 1.38 | 0.065 | 0.107 |
 
 (Corrected scoring: the backtest first scored each race against the FP1 entry list, which left
 out race drivers replaced by an FP1 rookie. Fixed 2026-09-25; conclusions unchanged.)
@@ -241,8 +241,40 @@ out race drivers replaced by an FP1 rookie. Fixed 2026-09-25; conclusions unchan
 ## 12. Open items
 
 - Default predictor: now **Auto** - whichever predictor has the best record on this season's
-  earlier races (baseline until 3 races). 2026: +0.018 / +0.014 before Qualifying, -0.005 after.
+  earlier races (baseline until 3 races). 2026: +0.018 / +0.014 before Qualifying, -0.008 after.
 - Chained model (practice → qualifying → race): most promising idea left; post-Day-3.
 - Day 3: generated commentary, deployment on Streamlit Cloud (browser step), polish.
 - Known gaps: race incidents are modelled as independent per driver; the pole sitter is still
   slightly under-rated (49% vs 9 of 14 won).
+
+## 13. Day 2b: retesting rejected features by how they do later in the season
+
+Question: the averages above mix early season (little in-season data) with late season. Would
+some rejected features pay off once a model has more of the current season to learn from?
+
+Method: each candidate added to ridge, both flavours (all seasons; same season only, the one
+that learns in-season), expanding window over 2023-26. Rule fixed before the runs: keep a
+feature if it improves the **second half** of the season in at least 3 of 4 seasons and on
+average, without significantly hurting the whole season. (One race swings ±0.05-0.09, so one good
+season is not evidence.)
+
+| Candidate | Result (after Qualifying unless noted) |
+|---|---|
+| Gap to teammate in qualifying | All-seasons ridge: +0.0016 in 2nd halves, 4 of 4 seasons → **added** |
+| New soft sets used before the race | Passed alone in both flavours; **added to same-season ridge** (with weighted pace); failed combined with teammate gap in all-seasons ridge |
+| Practice pace weighted FP1×1, FP2×2, FP3×3 | Same-season ridge: 3 of 4 → **added** with new softs (combined: early −0.005, late +0.004, 2nd half better in 2023-25, worse in 2026 −0.004) |
+| Grid penalty | 0 of 4 seasons → rejected |
+| FP2-only long-run rank | 1-2 of 4 → rejected |
+| Recency-weighted form (half-life 3) | Before Qualifying it gets significantly *worse* over the season → rejected |
+| Down-weighting 2022-25 (×0.5) | 2 of 4 → rejected |
+| **New:** driver-at-this-circuit history (places gained vs qualifying and gap to teammate at the same circuit in earlier seasons, shrunk toward 0) | Worse in every variant (all-seasons −0.005, winner log-loss +0.10; same-season −0.008) → rejected. At most four earlier visits per driver-circuit pair is too little to separate skill from noise |
+
+The added inputs are used only once Qualifying is visible (ridge fits one model per stage). The
+new tyre input needed a new column (`new_soft_sets`) extracted from FastF1's `FreshTyre` flag;
+the rebuild from the local cache was identical to the old data apart from that column (and it
+filled the previously missing 2023 R9 Sprint grid). Circuit names changed in the feed (Monaco →
+"Monte Carlo" 2026, Miami → "Miami Gardens" 2025+), so circuit history needs an alias table.
+
+Cost in 2026: Auto after Qualifying −0.008 vs baseline (was −0.005), because it used ridge in
+four early races. These features are a bet on future seasons, not a 2026 win.
+
