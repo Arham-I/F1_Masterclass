@@ -109,6 +109,8 @@ still slightly under-rated.
 
 Regenerate with `python scripts/backtest.py` (needs scipy from requirements-dev.txt). Detailed
 notes on every modelling question and experiment: [docs/day2-model-notes.md](docs/day2-model-notes.md).
+Routine commands for each race weekend, and experiments to repeat later in the season:
+[docs/season-checklist.md](docs/season-checklist.md).
 
 ## Run locally
 
