@@ -281,3 +281,25 @@ filled the previously missing 2023 R9 Sprint grid). Circuit names changed in the
 Cost in 2026: Auto after Qualifying −0.008 vs baseline (was −0.005), because it used ridge in
 four early races. These features are a bet on future seasons, not a 2026 win.
 
+## 14. Chained model (practice → qualifying → race): checked, not built
+
+Idea: train a model to predict *qualifying* from practice, then feed that into the post-Qualifying
+race model. Because the post-Qualifying baseline keeps the grid order, the chain's race-order
+forecast before Qualifying *is* its predicted qualifying order - so the whole idea can be
+checked by asking whether a qualifying-trained model orders the race better. Spearman, stages
+before Qualifying, 2023-26 (84 races):
+
+| Model | vs qualifying order | vs race order |
+|---|---|---|
+| Baseline (practice / sprint-quali order) | 0.665 | 0.560 |
+| Ridge all seasons, direct (race target) | 0.716 | 0.624 |
+| **Model A all seasons (qualifying target)** | **0.723** | **0.626** |
+| Ridge same season, direct | 0.710 | 0.618 |
+| Model A same season (qualifying target) | 0.718 | 0.615 |
+
+Model A predicts *qualifying* best, but for the race it is level with the direct ridge (+0.002 /
+−0.003). With ~2,000 training rows the noise in the race target is not the bottleneck; the
+features are, and both targets extract the same practice signal. So the chained race model adds
+nothing to the order. Its one real use would be a new output: a qualifying / pole forecast
+after practice (Model A beats the practice order by +0.06).
+
