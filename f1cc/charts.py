@@ -186,24 +186,50 @@ def stint_chart(features: pd.DataFrame, stints: pd.DataFrame, session: str) -> g
 
 # --- 4. race prediction ------------------------------------------------------------------
 def prediction_chart(pred: pd.DataFrame, stage_label: str, predictor: str) -> go.Figure:
-    """Podium probability per driver (bar) with win probability (marker), best first."""
+    """Podium probability per driver (bar, whole grid), with win chance in the label, best first."""
     title = "Predicted race result"
     if pred.empty:
         return empty_figure(title, "No prediction for this weekend")
     sigma = float(pred["sigma"].mean())
-    df = pred.sort_values("p_podium", ascending=False).head(12)
+    df = pred.sort_values(["p_podium", "p_win", "expected_pos"], ascending=[False, False, True])
     fig = go.Figure(go.Bar(
         y=df["driver"], x=df["p_podium"] * 100, orientation="h",
         marker=dict(color=[c if isinstance(c, str) else FALLBACK for c in df["team_color"]],
                     cornerradius=4, line=dict(color=SURFACE, width=2)),
-        text=[f"{p:.0%} podium · {w:.0%} win" for p, w in zip(df["p_podium"], df["p_win"])],
+        text=[f"{p:.2%} podium · {w:.2%} win" for p, w in zip(df["p_podium"], df["p_win"])],
         textposition="outside", cliponaxis=False, textfont=dict(color=INK_2, size=11),
-        customdata=np.stack([df["team"].fillna(""), df["expected_pos"], (df["p_dnf"] * 100).round()], axis=-1),
+        customdata=np.stack([df["team"].fillna(""), df["expected_pos"], (df["p_dnf"] * 100).round(2)], axis=-1),
         hovertemplate=("<b>%{y}</b> · %{customdata[0]}<br>Expected finish P%{customdata[1]}"
-                       "<br>Podium %{x:.0f}%<br>Retirement chance %{customdata[2]}%<extra></extra>"),
+                       "<br>Podium %{x:.2f}%<br>Retirement chance %{customdata[2]}%<extra></extra>"),
     ))
     fig = _style(fig, title, f"{predictor} · after {stage_label} · finishers typically ±{sigma:.1f} places", len(df))
-    fig.update_xaxes(title="podium probability (%)", range=[0, 118])
+    fig.update_xaxes(title="podium probability (%)", range=[0, 128])
+    return fig
+
+
+def result_vs_prediction_chart(df: pd.DataFrame, stage_label: str, predictor: str) -> go.Figure:
+    """Predicted place (hollow) vs actual finish (filled) per driver, ordered by the real result.
+    ``df``: driver, team, team_color, expected_pos, actual (position), finished (bool)."""
+    title = "Prediction vs race result"
+    if df.empty:
+        return empty_figure(title, "No race result")
+    df = df.sort_values("actual")
+    fig = go.Figure()
+    for _, r in df.iterrows():
+        fig.add_scatter(x=[r["expected_pos"], r["actual"]], y=[r["driver"]] * 2, mode="lines",
+                        line=dict(color=GRID, width=3), hoverinfo="skip", showlegend=False)
+    colors = [c if isinstance(c, str) else FALLBACK for c in df["team_color"]]
+    fig.add_scatter(x=df["expected_pos"], y=df["driver"], mode="markers", name="predicted",
+                    marker=dict(size=11, color=SURFACE, line=dict(color=colors, width=2)),
+                    customdata=df["team"], hovertemplate="<b>%{y}</b> · %{customdata}<br>predicted P%{x}<extra></extra>")
+    fig.add_scatter(x=df["actual"], y=df["driver"], mode="markers+text", name="actual",
+                    marker=dict(size=11, color=colors),
+                    text=["" if f else "DNF" for f in df["finished"]], textposition="middle right",
+                    textfont=dict(color=INK_3, size=10),
+                    customdata=df["team"], hovertemplate="<b>%{y}</b> · %{customdata}<br>finished P%{x}<extra></extra>")
+    fig = _style(fig, title, f"{predictor} · prediction made after {stage_label} · hollow = predicted, "
+                 "filled = actual", len(df), legend=True)
+    fig.update_xaxes(title="position", dtick=1, range=[0.5, len(df) + 1.5])
     return fig
 
 

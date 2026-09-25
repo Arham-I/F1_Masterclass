@@ -19,6 +19,11 @@ see sessions that have already "happened". The Race is never revealed. Each sess
   compound so soft and hard runners are comparable
 - **Tyre stints**: every stint per driver, by compound
 
+Below the charts: the race prediction for the whole grid (win / podium / retirement chances to two
+decimals) side by side with the result of the session it was made after. For finished weekends a
+separate **Race result** view (sidebar) shows the real finishing order next to the prediction made
+after any chosen session - display only; the replay itself never sees race data.
+
 ## Prediction and backtest
 
 After each revealed session the app shows podium and win probabilities plus a typical-error
