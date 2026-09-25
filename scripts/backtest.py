@@ -48,7 +48,9 @@ def main(year: int):
     rows, preds = [], []
     for r in rounds:
         w = b.weekend(year, int(r))
-        actual = b.matrix(year, int(r), 1, with_target=True).set_index("driver")["actual"]
+        # Score against everyone who raced - not the FP1 entry list, which misses race drivers
+        # replaced by a rookie in FP1 (and would drop the winner if it was one of them).
+        actual = b.result(year, int(r)).set_index("driver")["position"]
         for k in STAGES:
             if k > len(w.replayable):
                 continue

@@ -46,15 +46,15 @@ much less certain).
 
 | | Spearman with real order | Winner log-loss | Podium Brier | Whole-grid RPS |
 |---|---|---|---|---|
-| Baseline (default) | **0.726** | **0.99** | **0.059** | **0.102** |
-| Ridge, all seasons | 0.716 | 1.12 | 0.069 | 0.108 |
-| Ridge, 2026 only | 0.713 | 1.26 | 0.061 | 0.105 |
+| Baseline (default) | **0.712** | **1.02** | **0.064** | **0.100** |
+| Ridge, all seasons | 0.706 | 1.21 | 0.072 | 0.103 |
+| Ridge, 2026 only | 0.703 | 1.34 | 0.064 | 0.102 |
 
 Lower is better for everything except Spearman. RPS (ranked probability score) grades each
 driver's whole distribution of finishing positions, so it covers the midfield too.
 
-In 2026 the model does **not** beat the baseline on finishing order: -0.010 after Qualifying,
-95% interval [-0.025, +0.007]. Over 2023-26 (84 races) it does: +0.11 after the first session,
+In 2026 the model does **not** beat the baseline on finishing order: -0.006 after Qualifying,
+95% interval [-0.020, +0.011]. Over 2023-26 (84 races) it does: +0.11 after the first session,
 shrinking to +0.02 after Qualifying, all with intervals above zero. So the 2022-25 patterns it
 learns stopped paying off under the 2026 rules. The baseline stays the default; the model is
 selectable for comparison.
@@ -62,10 +62,10 @@ I also tried LightGBM (regression and lambdarank), random forests, other ridge p
 energy-management features built from speed traps; none beat the baseline.
 
 What did help was the probability model. Replacing one error size for every driver with
-retirements plus order-dependent noise cut the baseline's winner log-loss after Qualifying from
-1.45 to 1.19 (ridge: 1.56 to 1.12). Before, the pole sitter was always given about 29% to win;
-then about 46%. Using qualifying time gaps then cut it further to 0.99 in 2026 (1.39 to 1.25
-over 2023-26, 84 races, interval below zero) with no change to whole-grid RPS, and the pole
+retirements plus order-dependent noise made the win and podium chances clearly better calibrated:
+before, the pole sitter was always given about 29% to win; then about 46%. Using qualifying time
+gaps then cut the baseline's winner log-loss after Qualifying from 1.23 to 1.02 in 2026 (1.39 to
+1.25 over 2023-26, 84 races, interval below zero) with no change to whole-grid RPS, and the pole
 sitter now gets about 49% (in 2026 the pole sitter won 9 of 14).
 Sprint Qualifying beat practice pace as a guide on 2024-25 sprint weekends (0.59 vs 0.40); on
 2026's five sprint weekends it was better in four and worse in one, and level on average.
@@ -74,7 +74,12 @@ Also tested and not adopted: gap to teammate, long-run pace, new tyres used, gri
 track overtaking and safety-car history, lap-1 skill, and weighting recent races when fitting
 the noise. Each either added nothing beyond qualifying or made the probabilities worse.
 
-Known gaps: race incidents (crashes, safety cars) are independent per driver; the pole sitter is
+Scoring note: until 2026-09-25 the backtest scored each race against the FP1 entry list, so race
+drivers replaced by a rookie in FP1 were left out (up to seven per race, including one winner).
+Numbers above use the corrected scoring against everyone who raced; conclusions did not change.
+
+Known gaps: after FP1 the prediction covers the FP1 line-up, so a race driver who sat out FP1 is
+missing until FP2, and FP1 stand-ins stay in later predictions with tiny chances. Race incidents (crashes, safety cars) are independent per driver; the pole sitter is
 still slightly under-rated.
 
 Regenerate with `python scripts/backtest.py` (needs scipy from requirements-dev.txt).
