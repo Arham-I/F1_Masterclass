@@ -13,6 +13,7 @@ environment (`pip install -r requirements-dev.txt`).
 |---|---|---|
 | After each session (FP1, FP2, FP3, Q; ≥ 2 h after its start) | `python scripts/backfill.py --years 2026 --in-progress` | Pulls the finished sessions of the live weekend so the app shows a real forecast (listed as 🔴 LIVE) |
 | Then | `python scripts/backtest.py` | Writes predictions for the live weekend (predicted, not scored) |
+| After Qualifying, once penalties are published | add the starting grid to `data/starting_grid.csv` (two sources; `tests/test_live.py` checks it) | FastF1 only has the grid with the race result; the app shows it next to the prediction |
 | After the race | `python scripts/backfill.py --years 2026` then `python scripts/backtest.py` | Adds the Race; the weekend is now scored and joins the season trend |
 | Then | `python -m pytest tests` | Leak, integrity and freshness tests must pass |
 | Then | commit `data/*.parquet`, push, reboot the Streamlit app (Manage app → Reboot) | The deployed app only reads the committed parquet |
@@ -78,6 +79,7 @@ Parallel runs: `printf '%s\n' "control all" "+gain_form all" ... | xargs -P 4 -L
 | Speed-trap energy features | Extraction script was scratch-only; speed traps (`SpeedI1/I2/FL/ST`) are in the FastF1 cache but not stored. Add them to `features.py` if revisiting | ~1 h + test |
 | Telemetry clipping chart (speed traces on straights) | Good analysis chart for 2026 energy management; not useful for the model (no race-to-race persistence) | Hours of download |
 | Retirements by cause / safety-car likelihood | Race incidents are modelled as independent per driver; safety-car history did not predict error in the screen | ? |
+| Deleted laps in practice | Qualifying now uses official Q times; practice "best laps" can still include steward-deleted laps, because race-control messages are not loaded (not cached for past sessions: ~1 API call per session to fetch) | ~1 h + rebuild |
 | Weather line in commentary | Stored in the cache (per minute), not extracted. Commentary flavour only | ~30 min |
 
 ## 6. Ideas already rejected (do not redo without new data)

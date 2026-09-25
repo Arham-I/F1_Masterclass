@@ -46,3 +46,24 @@ def read(table: str, years: list[int] | None = None) -> pd.DataFrame:
     years = years if years is not None else available_years(table)
     frames = [_normalize_nulls(pd.read_parquet(path(table, y))) for y in years if path(table, y).exists()]
     return pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
+
+
+GRID_FILE = DATA_DIR / "starting_grid.csv"
+
+
+def starting_grid(features: pd.DataFrame, year: int, round_number: int) -> pd.DataFrame:
+    """Official starting grid (driver, grid, penalty). From the stored Race once it has run;
+    before that from data/starting_grid.csv, entered by hand from published grids, because
+    FastF1 only has the grid with the race result. Empty if neither is known."""
+    race = features[(features["year"] == year) & (features["round"] == round_number)
+                    & (features["session"] == "Race")]
+    if len(race) and race["grid"].notna().any():
+        g = race[["driver", "grid"]].assign(penalty=np.nan)
+        g["grid"] = g["grid"].replace(0, np.nan)            # 0 = pit-lane start
+        return g.reset_index(drop=True)
+    if GRID_FILE.exists():
+        g = pd.read_csv(GRID_FILE)
+        g = g[(g["year"] == year) & (g["round"] == round_number)]
+        return g[["driver", "grid", "penalty"]].reset_index(drop=True)
+    return pd.DataFrame(columns=["driver", "grid", "penalty"])
+

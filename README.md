@@ -52,8 +52,8 @@ much less certain).
 | | Spearman with real order | Winner log-loss | Podium Brier | Whole-grid RPS |
 |---|---|---|---|---|
 | Baseline | **0.712** | **1.02** | **0.064** | **0.104** |
-| Auto (default, see below) | 0.704 | 1.06 | 0.066 | 0.106 |
-| Ridge, all seasons | 0.707 | 1.21 | 0.071 | 0.107 |
+| Auto (default, see below) | 0.707 | 1.03 | 0.065 | 0.105 |
+| Ridge, all seasons | 0.706 | 1.21 | 0.072 | 0.107 |
 | Ridge, 2026 only | 0.700 | 1.38 | 0.065 | 0.107 |
 
 Lower is better for everything except Spearman. RPS (ranked probability score) grades each
@@ -69,8 +69,8 @@ The app's default is therefore **Auto**: at each stage it uses whichever predict
 record on *this season's earlier races* (the baseline until three races exist), re-decided every
 race. In 2026 it switched to the 2026-only ridge before Qualifying from round 5-7 on and kept the
 baseline after Qualifying. Against always using the baseline: +0.018 after the first session,
-+0.014 after the second (interval above zero), -0.005 after the third and -0.008 after
-Qualifying (it tried ridge there in four early races). A
++0.014 after the second (interval above zero), -0.005 after the third and -0.005 after
+Qualifying (it tried ridge there in a few early races). A
 race-by-race chart in the app shows how each model's record develops through the season.
 Down-weighting 2022-25 inside the all-seasons ridge (or using it only as a prior) was also tried:
 no season 2023-26 improved.
@@ -104,6 +104,14 @@ the noise. Each either added nothing beyond qualifying or made the probabilities
 Scoring note: until 2026-09-25 the backtest scored each race against the FP1 entry list, so race
 drivers replaced by a rookie in FP1 were left out (up to seven per race, including one winner).
 Numbers above use the corrected scoring against everyone who raced; conclusions did not change.
+
+Qualifying best laps use the official Q1-Q3 times: FastF1 only flags steward-deleted laps when
+race-control messages are loaded, and ~2.5% of stored qualifying "best laps" had been deleted laps.
+The starting grid (after penalties) is shown next to the prediction but is not a model input -
+since 2022 penalised drivers have typically recovered the lost places by the finish, and the
+qualifying order predicted the finish better (0.717 vs 0.687 in 2026). For a live weekend the grid
+comes from `data/starting_grid.csv`, entered by hand from published grids (FastF1 only has it with
+the race result).
 
 FP1 stand-ins (rookies in their mandatory FP1 outings) are dropped from the prediction once a
 later session shows their team with two other drivers.

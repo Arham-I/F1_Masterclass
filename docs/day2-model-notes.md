@@ -188,8 +188,8 @@ Current standings after Qualifying (2026):
 | | Spearman | Winner log-loss | Podium Brier | RPS |
 |---|---|---|---|---|
 | Baseline | **0.712** | **1.02** | **0.064** | **0.104** |
-| Auto (app default: best record this season) | 0.704 | 1.06 | 0.066 | 0.106 |
-| Ridge, all seasons | 0.707 | 1.21 | 0.071 | 0.107 |
+| Auto (app default: best record this season) | 0.707 | 1.03 | 0.065 | 0.105 |
+| Ridge, all seasons | 0.706 | 1.21 | 0.072 | 0.107 |
 | Ridge, 2026 only | 0.700 | 1.38 | 0.065 | 0.107 |
 
 (Corrected scoring: the backtest first scored each race against the FP1 entry list, which left
@@ -244,7 +244,7 @@ out race drivers replaced by an FP1 rookie. Fixed 2026-09-25; conclusions unchan
 ## 12. Open items
 
 - Default predictor: now **Auto** - whichever predictor has the best record on this season's
-  earlier races (baseline until 3 races). 2026: +0.018 / +0.014 before Qualifying, -0.008 after.
+  earlier races (baseline until 3 races). 2026: +0.018 / +0.014 before Qualifying, -0.005 after.
 - Chained model (practice → qualifying → race): most promising idea left; post-Day-3.
 - Day 3: generated commentary, deployment on Streamlit Cloud (browser step), polish.
 - Known gaps: race incidents are modelled as independent per driver; the pole sitter is still

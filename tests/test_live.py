@@ -31,3 +31,23 @@ def test_live_weekend_is_predicted_but_not_scored():
     for r in live:
         assert (preds["round"] == r).any()
         assert not (bt["round"] == r).any()
+
+
+def test_hand_entered_starting_grids_are_complete_and_consistent():
+    """Every hand-entered grid: positions 1..n once each, drivers = that weekend's qualifiers."""
+    if not store.GRID_FILE.exists():
+        pytest.skip("no starting_grid.csv")
+    g = pd.read_csv(store.GRID_FILE)
+    f = store.read("features")
+    for (y, r), grid in g.groupby(["year", "round"]):
+        assert sorted(grid["grid"]) == list(range(1, len(grid) + 1)), f"{y} R{r}: grid slots"
+        quali = f[(f["year"] == y) & (f["round"] == r) & (f["session"] == "Qualifying")]["driver"]
+        assert set(grid["driver"]) == set(quali), f"{y} R{r}: drivers differ from qualifying"
+        assert grid["penalty"].notna().sum() >= 1 or (grid["grid"].values == range(1, len(grid) + 1)).all()
+
+
+def test_starting_grid_prefers_the_stored_race():
+    f = store.read("features", [2026])
+    g = store.starting_grid(f, 2026, 14)                    # a finished weekend: from the Race rows
+    race = f[(f["round"] == 14) & (f["session"] == "Race")]
+    assert len(g) == len(race) and g["penalty"].isna().all()

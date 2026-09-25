@@ -121,14 +121,25 @@ def prediction_section(cutoff: Cutoff, stage: int, session_f: pd.DataFrame, sess
     table = (now[["expected_pos", "driver", "team", "p_win", "p_podium", "p_dnf"]]
              .merge(session_result(session_f, session), on="driver", how="left")
              .sort_values("expected_pos"))
+    grid = store.starting_grid(load_tables()[0], w.year, w.round) if session == "Qualifying" else pd.DataFrame()
+    if len(grid):   # published after Qualifying (penalties applied); not a model input
+        table = table.merge(grid[["driver", "grid"]], on="driver", how="left")
+        pens = grid.dropna(subset=["penalty"])
+        if len(pens):
+            st.caption("Starting grid differs from qualifying: "
+                       + " · ".join(f"{r.driver} P{int(r.grid)} ({r.penalty})" for r in pens.itertuples())
+                       + ". The prediction still starts from the qualifying order: since 2022, drivers with "
+                       "grid penalties have typically recovered the lost places by the finish.")
     for c in ("p_win", "p_podium", "p_dnf"):
         table[c] = table[c] * 100
-    st.dataframe(table[["expected_pos", "driver", "team", "session_pos", "session_gap", "p_win", "p_podium", "p_dnf"]],
+    st.dataframe(table[["expected_pos", "driver", "team", "session_pos", "session_gap",
+                        *(["grid"] if "grid" in table else []), "p_win", "p_podium", "p_dnf"]],
                  hide_index=True, width="stretch", height=35 * (len(table) + 1) + 3,
                  column_config={"expected_pos": st.column_config.NumberColumn("Predicted finish", format="P%d"),
                                 "driver": "Driver", "team": "Team",
                                 "session_pos": st.column_config.NumberColumn(f"{session} position", format="P%d"),
                                 "session_gap": st.column_config.NumberColumn(f"{session} gap (s)", format="+%.3f"),
+                                "grid": st.column_config.NumberColumn("Starting grid", format="P%d"),
                                 "p_win": st.column_config.NumberColumn("Win", format="%.2f%%"),
                                 "p_podium": st.column_config.NumberColumn("Podium", format="%.2f%%"),
                                 "p_dnf": st.column_config.NumberColumn("Retirement", format="%.2f%%")})
@@ -186,7 +197,7 @@ def race_view(features: pd.DataFrame, weekend: Weekend) -> None:
 
     st.plotly_chart(charts.result_vs_prediction_chart(df, labels[stage], shown), width="stretch",
                     config={"displayModeBar": False})
-    table = df.sort_values("actual")[["actual", "driver", "team", "expected_pos", "delta", "p_win",
+    table = df.sort_values("actual")[["actual", "driver", "team", "grid", "expected_pos", "delta", "p_win",
                                       "p_podium", "p_dnf", "status"]].copy()
     for c in ("p_win", "p_podium", "p_dnf"):
         table[c] = table[c] * 100
@@ -199,6 +210,7 @@ def race_view(features: pd.DataFrame, weekend: Weekend) -> None:
                                 "p_win": st.column_config.NumberColumn("Win %", format="%.2f%%"),
                                 "p_podium": st.column_config.NumberColumn("Podium %", format="%.2f%%"),
                                 "p_dnf": st.column_config.NumberColumn("Retire %", format="%.2f%%"),
+                                "grid": st.column_config.NumberColumn("Grid", format="P%d"),
                                 "status": "Status"})
     st.caption("This page only displays the result next to the stored predictions. The replay view never "
                "sees race data, and nothing here changes how any prediction is made.")

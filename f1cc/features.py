@@ -244,6 +244,14 @@ def extract(session, year: int, round_number: int, session_idx: int):
     f["status"] = _from_res("Status")
     for q in ("Q1", "Q2", "Q3"):
         f[f"{q.lower()}_s"] = _from_res(q, _secs)
+    # FastF1 only flags laps deleted by the stewards when race-control messages are loaded, which
+    # this pipeline skips; in qualifying ~2.5% of "best laps" were deleted laps. The official Q1-Q3
+    # times are authoritative, so use them for the qualifying best lap where they exist.
+    official = f[["q1_s", "q2_s", "q3_s"]].min(axis=1)
+    if session.name == "Qualifying" and official.notna().any():
+        f["best_lap_s"] = official.where(official.notna(), f["best_lap_s"])
+        f["gap_to_best_s"] = f["best_lap_s"] - f["best_lap_s"].min()
+        f["pace_rank"] = f["best_lap_s"].rank(method="min")
 
     meta = dict(
         year=year, round=round_number,
