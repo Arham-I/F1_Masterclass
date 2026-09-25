@@ -1,15 +1,19 @@
 """Smoke test the Streamlit app end to end: replay a weekend to Qualifying, then open the race
 view. The replay must never show race data; the race view must."""
+from pathlib import Path
+
 import pytest
 
 from f1cc import store
+
+APP = str(Path(__file__).resolve().parent.parent / "app.py")
 
 pytestmark = pytest.mark.skipif(not store.available_years("predictions"), reason="needs data/ and predictions")
 AppTest = pytest.importorskip("streamlit.testing.v1").AppTest
 
 
 def _replay_to_qualifying():
-    at = AppTest.from_file("app.py", default_timeout=120).run()
+    at = AppTest.from_file(APP, default_timeout=120).run()
     for _ in range(4):
         [b for b in at.button if "Next" in b.label][0].click().run()
     return at
