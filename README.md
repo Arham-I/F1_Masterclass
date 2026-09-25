@@ -46,9 +46,10 @@ much less certain).
 
 | | Spearman with real order | Winner log-loss | Podium Brier | Whole-grid RPS |
 |---|---|---|---|---|
-| Baseline (default) | **0.712** | **1.02** | **0.064** | **0.100** |
-| Ridge, all seasons | 0.706 | 1.21 | 0.072 | 0.103 |
-| Ridge, 2026 only | 0.703 | 1.34 | 0.064 | 0.102 |
+| Baseline | **0.712** | **1.02** | **0.064** | **0.104** |
+| Auto (default, see below) | 0.707 | 1.03 | 0.065 | 0.105 |
+| Ridge, all seasons | 0.706 | 1.21 | 0.072 | 0.107 |
+| Ridge, 2026 only | 0.703 | 1.34 | 0.064 | 0.107 |
 
 Lower is better for everything except Spearman. RPS (ranked probability score) grades each
 driver's whole distribution of finishing positions, so it covers the midfield too.
@@ -56,8 +57,17 @@ driver's whole distribution of finishing positions, so it covers the midfield to
 In 2026 the model does **not** beat the baseline on finishing order: -0.006 after Qualifying,
 95% interval [-0.020, +0.011]. Over 2023-26 (84 races) it does: +0.11 after the first session,
 shrinking to +0.02 after Qualifying, all with intervals above zero. So the 2022-25 patterns it
-learns stopped paying off under the 2026 rules. The baseline stays the default; the model is
-selectable for comparison.
+learns stopped paying off under the 2026 rules, at least early in the season: the 2026-only ridge
+starts with nothing to learn from and catches up as races accumulate.
+
+The app's default is therefore **Auto**: at each stage it uses whichever predictor has the best
+record on *this season's earlier races* (the baseline until three races exist), re-decided every
+race. In 2026 it switched to the 2026-only ridge before Qualifying from round 5-7 on and kept the
+baseline after Qualifying. Against always using the baseline: +0.018 after the first session,
++0.014 after the second (interval above zero), -0.005 after the third and after Qualifying. A
+race-by-race chart in the app shows how each model's record develops through the season.
+Down-weighting 2022-25 inside the all-seasons ridge (or using it only as a prior) was also tried:
+no season 2023-26 improved.
 I also tried LightGBM (regression and lambdarank), random forests, other ridge penalties and
 energy-management features built from speed traps; none beat the baseline.
 
@@ -78,11 +88,15 @@ Scoring note: until 2026-09-25 the backtest scored each race against the FP1 ent
 drivers replaced by a rookie in FP1 were left out (up to seven per race, including one winner).
 Numbers above use the corrected scoring against everyone who raced; conclusions did not change.
 
-Known gaps: after FP1 the prediction covers the FP1 line-up, so a race driver who sat out FP1 is
-missing until FP2, and FP1 stand-ins stay in later predictions with tiny chances. Race incidents (crashes, safety cars) are independent per driver; the pole sitter is
+FP1 stand-ins (rookies in their mandatory FP1 outings) are dropped from the prediction once a
+later session shows their team with two other drivers.
+
+Known gaps: after FP1 alone the prediction covers the FP1 line-up, so a race driver who sat out
+FP1 is missing until FP2. Race incidents (crashes, safety cars) are independent per driver; the pole sitter is
 still slightly under-rated.
 
-Regenerate with `python scripts/backtest.py` (needs scipy from requirements-dev.txt).
+Regenerate with `python scripts/backtest.py` (needs scipy from requirements-dev.txt). Detailed
+notes on every modelling question and experiment: [docs/day2-model-notes.md](docs/day2-model-notes.md).
 
 ## Run locally
 

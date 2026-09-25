@@ -82,6 +82,16 @@ def test_sprint_qualifying_moves_the_baseline_before_qualifying(features):
     assert not np.array_equal(p.point(YEAR, SPRINT_ROUND, 1).argsort(), p.point(YEAR, SPRINT_ROUND, 2).argsort())
 
 
+def test_fp1_stand_ins_leave_once_a_later_session_is_visible(features):
+    b = FeatureBuilder(features)
+    # 2026 R7: seven rookies drove FP1 in place of race drivers (e.g. ARO for a race seat).
+    assert "ARO" in set(b.matrix(YEAR, 7, 1)["driver"])
+    assert "ARO" not in set(b.matrix(YEAR, 7, 2)["driver"])
+    assert {"HAM", "NOR", "ANT"} <= set(b.matrix(YEAR, 7, 2)["driver"])   # the race drivers they stood in for
+    # ...but a race driver who merely missed FP2 (2026 R5: LAW, ALB) is not mistaken for one.
+    assert {"LAW", "ALB"} <= set(b.matrix(YEAR, 5, 2)["driver"])
+
+
 def test_retirement_chance_uses_this_seasons_earlier_races_only(features):
     b = FeatureBuilder(features)
     teams = b.matrix(YEAR, ROUND, 4)["team"]

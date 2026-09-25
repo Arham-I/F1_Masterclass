@@ -142,6 +142,16 @@ class FeatureBuilder:
         vis = apply_cutoff(self.features, cutoff)          # the ONLY rows of this weekend we touch
         if vis.empty:
             return pd.DataFrame(columns=["driver", "team", "team_color", "sq_rank", *FEATURES])
+        # FP1 stand-ins (e.g. rookies in their mandatory FP1 outing) do not race. A driver seen
+        # only in the first session is a stand-in when his team has already fielded two *other*
+        # drivers since - not merely because he missed a later session (crash repairs, a wet FP2).
+        first = vis["session_idx"].min()
+        later = vis[vis["session_idx"] > first]
+        if not later.empty:
+            fielded = later.groupby("team")["driver"].nunique()
+            first_only = vis[~vis["driver"].isin(later["driver"])]
+            stand_ins = first_only.loc[first_only["team"].map(fielded).fillna(0) >= 2, "driver"]
+            vis = vis[~vis["driver"].isin(stand_ins)]
 
         practice = vis[vis["session"].str.startswith("Practice")].copy()
         practice["gap_pct"] = practice["gap_to_best_s"] / (practice["best_lap_s"] - practice["gap_to_best_s"])

@@ -227,17 +227,24 @@ def uncertainty_chart(preds: pd.DataFrame, stage_labels: dict[int, str], current
     return fig
 
 
+PREDICTOR_COLORS = {"Baseline": INK_3, "Ridge (all seasons)": "#5B9BD5", "Ridge (2026 only)": ACCENT,
+                    "Auto": "#F2C14E"}
+
+
+def _predictor_color(name: str) -> str:
+    return next((c for k, c in PREDICTOR_COLORS.items() if name.startswith(k)), FALLBACK)
+
+
 def backtest_chart(summary: pd.DataFrame, stage_labels: dict[int, str], metric: str = "spearman") -> go.Figure:
     """Mean rank correlation per stage, one bar per predictor."""
     title = "Backtest: predictor vs baseline"
     if summary.empty:
         return empty_figure(title, "No backtest available")
-    palette = {0: INK_3, 1: ACCENT, 2: "#5B9BD5"}
     fig = go.Figure()
-    for i, (name, g) in enumerate(summary.groupby("predictor", sort=False)):
+    for name, g in summary.groupby("predictor", sort=False):
         g = g.sort_values("stage")
         fig.add_bar(name=name, x=[stage_labels[s] for s in g["stage"]], y=g[metric],
-                    marker=dict(color=palette.get(i, FALLBACK), cornerradius=3),
+                    marker=dict(color=_predictor_color(name), cornerradius=3),
                     text=[f"{v:.2f}" for v in g[metric]], textposition="outside",
                     textfont=dict(color=INK_2, size=11))
     fig = _style(fig, title, "Spearman correlation with the real finishing order, mean over 2026 races (higher = better)",
@@ -246,3 +253,29 @@ def backtest_chart(summary: pd.DataFrame, stage_labels: dict[int, str], metric: 
                       legend=dict(orientation="h", y=-0.22, yanchor="top", x=0, xanchor="left"))
     fig.update_yaxes(autorange=False, showgrid=True, gridcolor=GRID, range=[0, 1.08], tickfont=dict(color=INK_3))
     return fig
+
+
+def trend_chart(trend: pd.DataFrame, stage_label: str, upto_round: int | None = None) -> go.Figure:
+    """Season-to-date Spearman advantage over the baseline, race by race (0 = level)."""
+    title = "Race by race: better than the baseline yet?"
+    if trend.empty:
+        return empty_figure(title, "No backtest available")
+    fig = go.Figure()
+    fig.add_hline(y=0, line=dict(color=INK_3, width=1, dash="dot"))
+    for name, g in trend.groupby("predictor", sort=False):
+        g = g.sort_values("round")
+        fig.add_scatter(x=g["round"], y=g["to_date"], mode="lines+markers", name=name,
+                        line=dict(color=_predictor_color(name), width=2.5), marker=dict(size=6),
+                        customdata=g["diff"],
+                        hovertemplate=("R%{x}<br>season so far %{y:+.3f}<br>this race %{customdata:+.3f}"
+                                       "<extra>" + name + "</extra>"))
+    if upto_round:
+        fig.add_vline(x=upto_round, line=dict(color=INK_2, width=1))
+    fig = _style(fig, title, f"after {stage_label} · Spearman minus baseline, average over the season so far "
+                 "(above 0 = better)", 6, legend=True)
+    fig.update_layout(margin=dict(b=90), legend=dict(orientation="h", y=-0.25, yanchor="top", x=0, xanchor="left"))
+    rounds = sorted(trend["round"].unique())
+    fig.update_xaxes(showgrid=False, tickvals=rounds, ticktext=[f"R{r}" for r in rounds])
+    fig.update_yaxes(autorange=True, showgrid=True, gridcolor=GRID, zeroline=False, tickfont=dict(color=INK_3))
+    return fig
+

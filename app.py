@@ -62,16 +62,19 @@ def prediction_section(cutoff: Cutoff) -> None:
     if preds.empty:
         st.info("Predictions exist for 2026 only.")
         return
-    names = list(dict.fromkeys(preds["predictor"]))
-    default = names.index(bts.BASELINE)
-    who = st.selectbox("Predictor", names, index=default, help="Baseline is shipped by default: "
-                       "it was not beaten in the backtest (see the backtest below).")
+    names = [bts.AUTO, *dict.fromkeys(preds["predictor"])]
+    who = st.selectbox("Predictor", names, index=0, help="Auto uses, at each stage, whichever predictor "
+                       "has the best record on this season's earlier races (the baseline until 3 races "
+                       "exist). It only looks at finished races, so it never sees the answer.")
     w = cutoff.weekend
-    mine = preds[(preds["round"] == w.round) & (preds["predictor"] == who)]
     labels = {i + 1: n for i, n in enumerate(w.replayable)}
+    source = {k: bts.pick(bt, w.round, k) if who == bts.AUTO else who for k in labels}
+    mine = pd.concat([preds[(preds["round"] == w.round) & (preds["stage"] == k) & (preds["predictor"] == p)]
+                      for k, p in source.items()])
     now = mine[mine["stage"] == cutoff.revealed]
+    shown = f"Auto → {source[cutoff.revealed]}" if who == bts.AUTO else who
     left, right = st.columns([3, 2])
-    left.plotly_chart(charts.prediction_chart(now, labels[cutoff.revealed], who), width="stretch",
+    left.plotly_chart(charts.prediction_chart(now, labels[cutoff.revealed], shown), width="stretch",
                       config={"displayModeBar": False})
     right.plotly_chart(charts.uncertainty_chart(mine, labels, cutoff.revealed), width="stretch",
                        config={"displayModeBar": False})
@@ -79,13 +82,17 @@ def prediction_section(cutoff: Cutoff) -> None:
         st.caption("Before Qualifying there is no grid, so the prediction has to guess qualifying "
                    "too: expect wide error bars that tighten as the weekend goes on.")
     with st.expander("Backtest: how good is this, really?"):
-        summary = bts.summarize(bt)
+        full = bts.with_auto(bt)
+        summary = bts.summarize(full)
         st.plotly_chart(charts.backtest_chart(summary, STAGE_LABELS), width="stretch",
                         config={"displayModeBar": False})
-        diff = bts.paired_diff(bt, "Ridge (all seasons)")
-        st.caption("Ridge minus baseline (Spearman), 95% interval over the races: "
-                   + " · ".join(f"{STAGE_LABELS[int(r.stage)]} {r['diff']:+.3f} [{r.lo:+.3f}, {r.hi:+.3f}]"
-                                for _, r in diff.iterrows()))
+        st.plotly_chart(charts.trend_chart(bts.season_trend(full, cutoff.revealed), labels[cutoff.revealed],
+                                           upto_round=w.round), width="stretch", config={"displayModeBar": False})
+        for name in (bts.AUTO, "Ridge (all seasons)"):
+            diff = bts.paired_diff(full, name)
+            st.caption(f"{name} minus baseline (Spearman), 95% interval over the races: "
+                       + " · ".join(f"{STAGE_LABELS[int(r.stage)]} {r['diff']:+.3f} [{r.lo:+.3f}, {r.hi:+.3f}]"
+                                    for _, r in diff.iterrows()))
         after_q = summary[summary["stage"] == 4].set_index("predictor")
         st.caption("How good are the percentages? Winner log-loss after Qualifying (lower = better; "
                    "a uniform guess over 22 cars scores 3.09): "
