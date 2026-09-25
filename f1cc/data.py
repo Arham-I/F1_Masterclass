@@ -53,6 +53,23 @@ def completed_rounds(year: int, today: date | None = None) -> list[int]:
     return [int(r) for r in done.RoundNumber]
 
 
+# A session's data is on FastF1 some time after it ends; practice/qualifying last about an hour.
+SESSION_READY_AFTER = pd.Timedelta(hours=2)
+
+
+def finished_sessions(schedule_row: pd.Series, now: pd.Timestamp | None = None) -> list[str]:
+    """Sessions of a weekend whose data should be available by ``now`` (UTC), in running order.
+    Never includes the Race: an in-progress weekend is exactly one whose race is still to come."""
+    now = now if now is not None else pd.Timestamp.now(tz="UTC").tz_localize(None)
+    out = []
+    for i in range(1, 6):
+        name, start = schedule_row.get(f"Session{i}"), schedule_row.get(f"Session{i}DateUtc")
+        if isinstance(name, str) and name and name != "Race" and pd.notna(start) \
+                and pd.Timestamp(start).tz_localize(None) + SESSION_READY_AFTER <= now:
+            out.append(name)
+    return out
+
+
 def weekend_sessions(schedule_row: pd.Series) -> list[str]:
     """Session names for a weekend, in running order.
 

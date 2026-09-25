@@ -26,10 +26,12 @@ def load_predictions(year: int) -> tuple[pd.DataFrame, pd.DataFrame]:
 
 
 @st.cache_data(show_spinner=False)
-def list_weekends(features: pd.DataFrame) -> list[tuple[int, int]]:
-    """(year, round) pairs that have a Race session, newest first: complete, replayable weekends."""
-    done = features[features["session"] == "Race"][["year", "round"]].drop_duplicates()
-    return sorted(map(tuple, done.to_numpy().tolist()), reverse=True)
+def list_weekends(features: pd.DataFrame) -> tuple[list[tuple[int, int]], set[tuple[int, int]]]:
+    """All weekends newest first, and the set of *live* ones (sessions stored, race not run yet)."""
+    all_ = set(map(tuple, features[["year", "round"]].drop_duplicates().to_numpy().tolist()))
+    raced = set(map(tuple, features.loc[features["session"] == "Race", ["year", "round"]]
+                    .drop_duplicates().to_numpy().tolist()))
+    return sorted(all_, reverse=True), all_ - raced
 
 
 def stepper_html(cutoff: Cutoff) -> str:
@@ -106,11 +108,13 @@ def main() -> None:
         st.error("No data found in data/. Run `python scripts/backfill.py --years 2026` first.")
         st.stop()
 
-    weekends = list_weekends(features)
+    weekends, live = list_weekends(features)
     with st.sidebar:
         st.header("Replay")
         labels = {yr_rd: Weekend.from_features(features, *yr_rd).label() for yr_rd in weekends}
-        choice = st.selectbox("Weekend", weekends, format_func=lambda k: f"{k[0]} · {labels[k]}")
+        default = next(i for i, k in enumerate(weekends) if k not in live)   # latest finished weekend
+        choice = st.selectbox("Weekend", weekends, index=default,
+                              format_func=lambda k: f"{'🔴 LIVE · ' if k in live else ''}{k[0]} · {labels[k]}")
         st.caption("Replays a finished weekend session by session. "
                    "Nothing after the current session is visible to the app.")
 
@@ -122,6 +126,9 @@ def main() -> None:
     st.title(f"{weekend.event_name}")
     st.caption(f"{weekend.year} · Round {weekend.round} · {weekend.location} · {weekend.event_date}")
     st.markdown(stepper_html(cutoff), unsafe_allow_html=True)
+    if choice in live:
+        st.warning(f"**Live weekend.** The race has not been run yet: sessions so far are "
+                   f"{', '.join(weekend.replayable)}. The prediction below is a real forecast, not a replay.")
 
     c1, c2, _ = st.columns([1, 1, 6])
     if c1.button("▶ Next session", disabled=cutoff.is_done, type="primary", width="stretch"):

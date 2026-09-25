@@ -44,22 +44,25 @@ def main(year: int):
     b = FeatureBuilder(features)
     predictors = [BaselinePredictor(features, b), RidgePredictor(features, b),
                   RidgePredictor(features, b, same_year_only=True)]
-    rounds = sorted(features[(features["year"] == year) & (features["session"] == "Race")]["round"].unique())
+    this_year = features[features["year"] == year]
+    raced = set(this_year.loc[this_year["session"] == "Race", "round"])
+    rounds = sorted(this_year["round"].unique())   # includes a live weekend whose race is still to come
     rows, preds = [], []
     for r in rounds:
         w = b.weekend(year, int(r))
         # Score against everyone who raced - not the FP1 entry list, which misses race drivers
         # replaced by a rookie in FP1 (and would drop the winner if it was one of them).
-        actual = b.result(year, int(r)).set_index("driver")["position"]
+        actual = b.result(year, int(r)).set_index("driver")["position"] if r in raced else None
         for k in STAGES:
             if k > len(w.replayable):
                 continue
             for P in predictors:
                 out = P.predict(Cutoff(w, k))
-                rows.append({"year": year, "round": int(r), "stage": k, "stage_name": w.replayable[k - 1],
-                             "predictor": P.name, **metrics(out, actual)})
                 preds.append(out.assign(year=year, round=int(r), stage=k, predictor=P.name))
-        print(f"R{int(r):02d} done", flush=True)
+                if actual is not None:   # a live weekend is predicted, not scored
+                    rows.append({"year": year, "round": int(r), "stage": k, "stage_name": w.replayable[k - 1],
+                                 "predictor": P.name, **metrics(out, actual)})
+        print(f"R{int(r):02d} done{'' if r in raced else ' (live: predicted, not scored)'}", flush=True)
     store.write("backtest", year, pd.DataFrame(rows))
     store.write("predictions", year, pd.concat(preds, ignore_index=True))
 

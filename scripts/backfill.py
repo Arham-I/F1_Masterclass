@@ -6,6 +6,9 @@ so re-running after an interruption (or after a new race weekend) only fetches w
     python scripts/backfill.py --years 2026
     python scripts/backfill.py --years 2025 2024 2023 2022
     python scripts/backfill.py --years 2026 --rounds 14
+    python scripts/backfill.py --years 2026 --in-progress   # also the finished sessions of a live weekend
+
+A live weekend's sessions are stored as they finish; its Race is added by a normal run afterwards.
 """
 from __future__ import annotations
 
@@ -45,9 +48,13 @@ def _load_and_extract(year: int, rnd: int, sname: str, idx: int):
             time.sleep(RATE_LIMIT_WAIT_S)
 
 
-def backfill_year(year: int, rounds: list[int] | None) -> list[tuple]:
+def backfill_year(year: int, rounds: list[int] | None, in_progress: bool = False) -> list[tuple]:
     sched = data.get_schedule(year)
-    wanted = set(data.completed_rounds(year))
+    completed = set(data.completed_rounds(year))
+    wanted = set(completed)
+    if in_progress:   # weekends under way: race not run yet, but some sessions finished
+        wanted |= {int(r.RoundNumber) for _, r in sched.iterrows()
+                   if int(r.RoundNumber) not in completed and data.finished_sessions(r)}
     if rounds:
         wanted &= set(rounds)
 
@@ -61,8 +68,9 @@ def backfill_year(year: int, rounds: list[int] | None) -> list[tuple]:
     for rnd in sorted(wanted):
         row = sched[sched.RoundNumber == rnd].iloc[0]
         new = {t: [] for t in store.TABLES}
+        ready = data.weekend_sessions(row) if rnd in completed else data.finished_sessions(row)
         for idx, sname in enumerate(data.weekend_sessions(row)):
-            if (rnd, sname) in done:
+            if (rnd, sname) in done or sname not in ready:
                 continue
             t0 = time.time()
             try:
@@ -92,13 +100,15 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--years", type=int, nargs="+", required=True)
     ap.add_argument("--rounds", type=int, nargs="*", help="restrict to these round numbers")
+    ap.add_argument("--in-progress", action="store_true",
+                    help="also pull finished sessions of a weekend whose race has not run yet")
     args = ap.parse_args()
 
     t0 = time.time()
     all_failures: list[tuple] = []
     for year in args.years:
         print(f"== {year}", flush=True)
-        all_failures += backfill_year(year, args.rounds)
+        all_failures += backfill_year(year, args.rounds, args.in_progress)
         print(f"[{time.time()-t0:5.0f}s] finished {year}", flush=True)
 
     if all_failures:
