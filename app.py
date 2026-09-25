@@ -8,6 +8,19 @@ from __future__ import annotations
 import pandas as pd
 import streamlit as st
 
+# Streamlit Cloud can keep an old copy of our own modules in memory after a redeploy (seen
+# 2026-09-25: new app.py, old f1cc/charts.py -> AttributeError until a reboot). Reload them on
+# every run - they are small and side-effect free - *before* the names below are imported.
+import importlib  # noqa: E402
+import f1cc.backtest_summary  # noqa: E402
+import f1cc.charts  # noqa: E402
+import f1cc.predict.base  # noqa: E402
+import f1cc.replay  # noqa: E402
+import f1cc.store  # noqa: E402
+
+for _module in (f1cc.store, f1cc.replay, f1cc.predict.base, f1cc.charts, f1cc.backtest_summary):
+    importlib.reload(_module)
+
 from f1cc import backtest_summary as bts
 from f1cc import charts, store
 from f1cc.predict.base import finished
