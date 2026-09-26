@@ -327,4 +327,10 @@ recovery (P8 / P11); Auto had been choosing the baseline after Qualifying.
 - "More weight to race data": the model's targets are already race results; weighting recent
   races more (§10) did not help. Race *pace* from earlier races helps as part of the car-pace
   estimate above.
+- Robustness checks (2026-09-26): (a) ignoring a teammate's qualifying position when it is ≥ 8
+  places below his practice pace (a crash or problem, 5% of driver-weekends) did not help (−0.002
+  over 2023-26, 38 races changed) - averaging three pace estimates already absorbs it. (b)
+  Retirement risk by starting position is almost entirely explained by team reliability (back-of-
+  grid excess ≤ +1 pt); fast cars starting out of position showed no extra risk, so the team-based
+  retirement chance needs no grid adjustment.
 
