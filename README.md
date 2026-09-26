@@ -51,8 +51,9 @@ much less certain).
 
 | | Spearman with real order | Winner log-loss | Podium Brier | Whole-grid RPS |
 |---|---|---|---|---|
-| Baseline | **0.712** | **1.02** | **0.064** | **0.104** |
-| Auto (default, see below) | 0.707 | 1.03 | 0.065 | 0.105 |
+| Baseline | 0.712 | 1.02 | **0.064** | **0.104** |
+| Grid + recovery | **0.717** | 1.00 | 0.066 | **0.104** |
+| Auto (default, see below) | 0.711 | **0.97** | 0.066 | 0.105 |
 | Ridge, all seasons | 0.706 | 1.21 | 0.072 | 0.107 |
 | Ridge, 2026 only | 0.700 | 1.38 | 0.065 | 0.107 |
 
@@ -65,12 +66,19 @@ shrinking to +0.02 after Qualifying, all with intervals above zero. So the 2022-
 learns stopped paying off under the 2026 rules, at least early in the season: the 2026-only ridge
 starts with nothing to learn from and catches up as races accumulate.
 
+**Grid + recovery** (added 2026-09-26): the grid order, but a fast car starting out of position is
+expected to move forward by half the gap between its grid slot and where its pace says it
+belongs (mean of practice pace, teammate's qualifying position, and the team's race pace in
+earlier races). Over 2023-26 it beat the baseline by +0.018 Spearman after Qualifying (interval
+above zero); in 2026 +0.006. The recovery strength is learned from all earlier races; re-tuning
+it from only the latest race(s) - a tighter feedback loop - was tested and did worse.
+
 The app's default is therefore **Auto**: at each stage it uses whichever predictor has the best
 record on *this season's earlier races* (the baseline until three races exist), re-decided every
 race. In 2026 it switched to the 2026-only ridge before Qualifying from round 5-7 on and kept the
 baseline after Qualifying. Against always using the baseline: +0.018 after the first session,
-+0.014 after the second (interval above zero), -0.005 after the third and -0.005 after
-Qualifying (it tried ridge there in a few early races). A
++0.014 after the second (interval above zero), -0.005 after the third and -0.001 after
+Qualifying, where from round 10 it uses Grid + recovery. A
 race-by-race chart in the app shows how each model's record develops through the season.
 Down-weighting 2022-25 inside the all-seasons ridge (or using it only as a prior) was also tried:
 no season 2023-26 improved.

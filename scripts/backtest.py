@@ -13,7 +13,7 @@ import pandas as pd
 from scipy.stats import spearmanr
 
 from f1cc import store
-from f1cc.predict import BaselinePredictor, FeatureBuilder, RidgePredictor
+from f1cc.predict import BaselinePredictor, FeatureBuilder, RecoveryPredictor, RidgePredictor
 from f1cc.predict.base import rps
 from f1cc.replay import Cutoff
 
@@ -42,7 +42,7 @@ def metrics(pred: pd.DataFrame, actual: pd.Series) -> dict:
 def main(year: int):
     features = store.read("features")
     b = FeatureBuilder(features)
-    predictors = [BaselinePredictor(features, b), RidgePredictor(features, b),
+    predictors = [BaselinePredictor(features, b), RecoveryPredictor(features, b), RidgePredictor(features, b),
                   RidgePredictor(features, b, same_year_only=True)]
     this_year = features[features["year"] == year]
     raced = set(this_year.loc[this_year["session"] == "Race", "round"])

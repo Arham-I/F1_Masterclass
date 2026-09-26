@@ -36,6 +36,7 @@ Traps:
 | Is a model pulling ahead of the baseline? | `python scripts/experiments/season_trend.py` | 2nd-half gap turning positive for a ridge. Auto switches on its own; this is for understanding. Also in the app: Backtest → "Race by race" chart |
 | Rejected features that might mature | run `feature_retest.py` for `control`, `+gain_form`, `+penalty`, `+lr_fp2`, `+form_hl3`, `+track`, `+old_x0.5` (both `all` and `season`), then `evaluate_retest.py` | A `PASS` = 2nd half better in ≥ 3 seasons and on average. Add it to `AFTER_Q` in `f1cc/predict/model.py` (or to `FEATURES` if it helps before Qualifying too), rerun the backtest |
 | The three Day 2b additions still earning their place | same script with `+tm_delta all`, `combo_season season` | If their 2nd-half gains turn negative across seasons, remove them from `AFTER_Q` |
+| Recovery strength | `RecoveryPredictor(...).gamma(year, round)` and Auto's picks (`season_trend.py`) | γ is re-learned from all earlier races each weekend; if 2026 keeps showing no recovery, it drifts down on its own |
 | Chained model (practice → qualifying → race) | `python scripts/experiments/chained_gate.py` | Model A beating the direct ridge on *race* order by more than ~0.01 across seasons |
 | Race-vs-qualifying gains start persisting in 2026 | Not scripted: correlate each driver's mean places gained vs qualifying in earlier 2026 races with the next race's (method in notes §10, "battery-management proxies") | Positive persistence again at driver/team level → retest `+gain_form` |
 

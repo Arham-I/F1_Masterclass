@@ -187,8 +187,9 @@ Current standings after Qualifying (2026):
 
 | | Spearman | Winner log-loss | Podium Brier | RPS |
 |---|---|---|---|---|
-| Baseline | **0.712** | **1.02** | **0.064** | **0.104** |
-| Auto (app default: best record this season) | 0.707 | 1.03 | 0.065 | 0.105 |
+| Baseline | 0.712 | 1.02 | **0.064** | **0.104** |
+| Grid + recovery | **0.717** | 1.00 | 0.066 | **0.104** |
+| Auto (app default: best record this season) | 0.711 | **0.97** | 0.066 | 0.105 |
 | Ridge, all seasons | 0.706 | 1.21 | 0.072 | 0.107 |
 | Ridge, 2026 only | 0.700 | 1.38 | 0.065 | 0.107 |
 
@@ -303,4 +304,27 @@ Model A predicts *qualifying* best, but for the race it is level with the direct
 features are, and both targets extract the same practice signal. So the chained race model adds
 nothing to the order. Its one real use would be a new output: a qualifying / pole forecast
 after practice (Model A beats the practice order by +0.06).
+
+## 15. Overtaking / recovery potential, and the feedback-loop question (2026-09-26)
+
+Prompted by Baku 2026: Antonelli (Mercedes) qualified P16 after a Q1 crash, with his teammate on
+pole and top-5 practice pace, yet the baseline predicted P16. The ridges already predicted
+recovery (P8 / P11); Auto had been choosing the baseline after Qualifying.
+
+- Out-of-position fast cars do recover: 93 cases 2022-26 (driver ≥ 8 places behind a top-5
+  teammate), median 4 places gained.
+- Recovery adjustment: grid slot − γ × max(0, grid slot − pace slot). Pace slot = field rank of the
+  mean of practice pace rank, teammate's qualifying position, and team race pace (median race
+  long-run delta) in this season's earlier races - the "use race data" idea, as a car-pace input.
+  γ chosen on 2022-25: 0.5. 2022-25 0.650 → 0.670; 2026 neutral.
+- **Feedback loop** (re-tune γ before every race, backtest the procedure): choosing on all earlier
+  races +0.017 over 2023-26 (interval above zero); this season only −0.005 in 2026 (significant);
+  last 8 races −0.006; last race only +0.007 overall (noise; γ jumped 0 ↔ 0.7). Learning from all
+  earlier races beats tighter loops.
+- Shipped as a fourth predictor, **Grid + recovery** (`f1cc/predict/recovery.py`), available to Auto.
+  Implemented: 2023-26 +0.018 [+0.007, +0.030]; 2026 +0.006. Auto picks it after Qualifying from
+  round 10; Baku forecast: Antonelli P9.
+- "More weight to race data": the model's targets are already race results; weighting recent
+  races more (§10) did not help. Race *pace* from earlier races helps as part of the car-pace
+  estimate above.
 

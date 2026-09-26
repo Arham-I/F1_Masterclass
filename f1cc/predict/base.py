@@ -35,7 +35,7 @@ SPRINT_QUALI = ("Sprint Qualifying", "Sprint Shootout")
 FINISHED = ("Finished", "Lapped")
 FEATURES = ["prac_rank", "prac_gap_pct", "lr_rank", "sprint_rank", "sprint_pos", "q_pos", "q_gap_pct",
             "team_form", "driver_form"]
-EXTRA_COLUMNS = ["tm_delta", "new_soft", "prac_rank_w", "prac_gap_pct_w"]
+EXTRA_COLUMNS = ["tm_delta", "new_soft", "prac_rank_w", "prac_gap_pct_w", "tm_q_pos", "team_race_pace"]
 OUTPUT = ["driver", "team", "team_color", "score", "expected_pos", "sigma", "p_dnf", "p_win", "p_podium",
           "p_pos"]         # p_pos: list of chances of finishing P1..Pn
 
@@ -95,6 +95,9 @@ class FeatureBuilder:
         races = features[features["session"] == "Race"].dropna(subset=["position"])
         self._races = races[["year", "round", "driver", "team", "position"]].assign(
             dnf=~finished(races["status"].fillna("")))
+        race_laps = features[(features["session"] == "Race")].dropna(subset=["longrun_delta_s"])
+        self._race_pace = (race_laps.groupby(["year", "round", "team"])["longrun_delta_s"].median()
+                           .rename("pace").reset_index())
         self._weekends: dict[tuple[int, int], Weekend] = {}
         self._cache: dict[tuple[int, int, int], pd.DataFrame] = {}
 
@@ -192,6 +195,14 @@ class FeatureBuilder:
             for src, dst in (("pace_rank", "prac_rank_w"), ("gap_pct", "prac_gap_pct_w")):
                 ok = practice.dropna(subset=[src])
                 out[dst] = (ok[src] * ok["w"]).groupby(ok["driver"]).sum() / ok.groupby("driver")["w"].sum()
+
+        # Car pace, for the recovery predictor: the teammate's qualifying position (what this car
+        # can do on one lap) and the team's race pace in this season's earlier races (median
+        # long-run lap vs the field on the same compound; lower = faster).
+        out["tm_q_pos"] = out["q_pos"].groupby(out["team"]).transform("sum") - out["q_pos"]
+        out["tm_q_pos"] = out["tm_q_pos"].where(out["q_pos"].groupby(out["team"]).transform("count") == 2)
+        rp = self._race_pace[(self._race_pace["year"] == year) & (self._race_pace["round"] < round_number)]
+        out["team_race_pace"] = out["team"].map(rp.groupby("team")["pace"].mean())
 
         # Form comes from Race results of *earlier* weekends of the same season only.
         hist = self._races[(self._races["year"] == year) & (self._races["round"] < round_number)]

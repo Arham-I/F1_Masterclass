@@ -10,7 +10,7 @@ import pytest
 
 from f1cc import backtest_summary as bts
 from f1cc import store
-from f1cc.predict import BaselinePredictor, FeatureBuilder, RidgePredictor, simulate
+from f1cc.predict import BaselinePredictor, FeatureBuilder, RecoveryPredictor, RidgePredictor, simulate
 from f1cc.predict.base import FEATURES, OUTPUT, position_distribution, rps
 from f1cc.predict.baseline import TIME_WEIGHT
 from f1cc.replay import Cutoff
@@ -48,14 +48,14 @@ def _same(a: pd.DataFrame, b: pd.DataFrame):
     pd.testing.assert_frame_equal(a.reset_index(drop=True), b.reset_index(drop=True))
 
 
-@pytest.mark.parametrize("predictor_cls", [BaselinePredictor, RidgePredictor])
+@pytest.mark.parametrize("predictor_cls", [BaselinePredictor, RecoveryPredictor, RidgePredictor])
 @pytest.mark.parametrize("k", [1, 2, 3, 4])
 def test_prediction_ignores_the_race_it_is_predicting(features, predictor_cls, k):
     is_target_race = (features["year"] == YEAR) & (features["round"] == ROUND) & (features["session"] == "Race")
     _same(_run(predictor_cls, features, k), _run(predictor_cls, _scramble(features, is_target_race), k))
 
 
-@pytest.mark.parametrize("predictor_cls", [BaselinePredictor, RidgePredictor])
+@pytest.mark.parametrize("predictor_cls", [BaselinePredictor, RecoveryPredictor, RidgePredictor])
 @pytest.mark.parametrize("k", [1, 2, 3])
 def test_prediction_ignores_sessions_after_the_cutoff(features, predictor_cls, k):
     b = FeatureBuilder(features)
@@ -65,7 +65,7 @@ def test_prediction_ignores_sessions_after_the_cutoff(features, predictor_cls, k
     _same(_run(predictor_cls, features, k), _run(predictor_cls, _scramble(features, mask), k))
 
 
-@pytest.mark.parametrize("predictor_cls", [BaselinePredictor, RidgePredictor])
+@pytest.mark.parametrize("predictor_cls", [BaselinePredictor, RecoveryPredictor, RidgePredictor])
 @pytest.mark.parametrize("k", [1, 2, 3])
 def test_sprint_weekend_prediction_ignores_later_sessions_and_the_race(features, predictor_cls, k):
     b = FeatureBuilder(features)
@@ -118,6 +118,25 @@ def test_fp1_stand_ins_leave_once_a_later_session_is_visible(features):
     assert {"LAW", "ALB"} <= set(b.matrix(YEAR, 5, 2)["driver"])
 
 
+def test_recovery_only_moves_drivers_forward_and_only_after_qualifying(features):
+    from f1cc.predict.recovery import recovery_shift
+    b = FeatureBuilder(features)
+    for k in (1, 2, 3):
+        assert (recovery_shift(b.matrix(YEAR, ROUND, k), 0.5) == 0).all()
+    shift = recovery_shift(b.matrix(YEAR, ROUND, 4), 0.5)
+    assert (shift >= 0).all() and shift.max() > 0
+    m = b.matrix(YEAR, 15, 4) if (features["round"] == 15).any() else b.matrix(YEAR, ROUND, 4)
+    if "ANT" in set(m["driver"]) and (features["round"] == 15).any():
+        # 2026 Baku: Mercedes car qualified P16 after a Q1 crash, teammate on pole
+        assert recovery_shift(m, 0.5)[list(m["driver"]).index("ANT")] > 3
+
+
+def test_recovery_strength_is_learned_from_earlier_races_only(features):
+    later = (features["year"] == YEAR) & (features["round"] >= ROUND)
+    g = lambda f: RecoveryPredictor(f, FeatureBuilder(f)).gamma(YEAR, ROUND)
+    assert g(features) == g(_scramble(features, later))
+
+
 def test_retirement_chance_uses_this_seasons_earlier_races_only(features):
     b = FeatureBuilder(features)
     teams = b.matrix(YEAR, ROUND, 4)["team"]
@@ -133,7 +152,7 @@ def test_noise_is_fitted_on_earlier_weekends_only(features):
     assert fit(features) == fit(_scramble(features, later))
 
 
-@pytest.mark.parametrize("predictor_cls", [BaselinePredictor, RidgePredictor])
+@pytest.mark.parametrize("predictor_cls", [BaselinePredictor, RecoveryPredictor, RidgePredictor])
 def test_prediction_ignores_later_weekends(features, predictor_cls):
     rnd = 10                                               # mid-season, so rounds 11-14 exist
     mask = (features["year"] == YEAR) & (features["round"] > rnd)
@@ -248,7 +267,7 @@ def test_backtest_covers_every_race_and_stage():
     if bt.empty:
         pytest.skip("run scripts/backtest.py first")
     assert set(bt["stage"]) == {1, 2, 3, 4}
-    assert bt.groupby(["round", "stage"])["predictor"].nunique().eq(3).all()
+    assert bt.groupby(["round", "stage"])["predictor"].nunique().eq(4).all()
     assert bt["spearman"].between(-1, 1).all()
 
 
