@@ -179,7 +179,7 @@ class FeatureBuilder:
         out["q_gap_pct"] = quali["gap_to_best_s"] / (quali["best_lap_s"] - quali["gap_to_best_s"])
 
         # Extra inputs some predictors use once Qualifying is visible (see model.py for which,
-        # and docs/day2-model-notes.md for the test that selected them).
+        # and docs/experiments.md for the test that selected them).
         q_gap = out["q_gap_pct"] * 100
         mate = q_gap.groupby(out["team"]).transform("sum") - q_gap
         n_timed = q_gap.groupby(out["team"]).transform("count")

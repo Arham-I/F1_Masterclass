@@ -15,7 +15,7 @@ from .baseline import BaselinePredictor
 ALPHA = 10.0
 
 # Inputs added once Qualifying is visible, per ridge flavour. Chosen on 2023-26 by whether they
-# improved the second half of seasons (see docs/day2-model-notes.md): gains are small (~0.002-0.004
+# improved the second half of seasons (see docs/experiments.md): gains are small (~0.002-0.004
 # Spearman) and the Auto rule still decides race by race whether ridge is used at all.
 #   all seasons:  + gap to teammate in qualifying
 #   same season:  + new soft sets used before the race, practice pace weighted FP1x1/FP2x2/FP3x3

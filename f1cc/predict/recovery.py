@@ -6,7 +6,7 @@ pace rank, the teammate's qualifying position, and the team's race pace in this 
 races. A driver starting behind that slot is moved up by gamma x the gap (never down). gamma is
 chosen before every race on *all* earlier races (0.5 from 2023 on).
 
-Evidence (docs/day2-model-notes.md section 15): over 2023-26 +0.017 Spearman after Qualifying
+Evidence (docs/experiments.md): over 2023-26 +0.017 Spearman after Qualifying
 (interval above zero); in 2026 neutral so far (-0.002), where qualifying has been unusually
 decisive. Re-tuning gamma from only this season or the last few races did worse. The Auto rule
 decides race by race whether this predictor is used.

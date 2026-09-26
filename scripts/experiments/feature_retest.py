@@ -4,7 +4,7 @@ Writes one parquet per (variant, ridge kind) to --out; then run evaluate_retest.
 Usage (from the repo root; ~5-10 min per run, run several in parallel with xargs -P 4):
     python scripts/experiments/feature_retest.py control all --out experiments_out
     python scripts/experiments/feature_retest.py +gain_form season --out experiments_out
-Variants: see VARIANTS below. See docs/day2-model-notes.md section 13 for the decision rule.
+Variants: see VARIANTS below. The decision rule (second-half rule) is in docs/evaluation.md.
 "control" is the plain ridge on FEATURES - *without* the after-Qualifying extras in
 f1cc/predict/model.py (AFTER_Q) - so each candidate is judged on its own.
 """

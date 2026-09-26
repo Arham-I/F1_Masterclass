@@ -1,7 +1,7 @@
 """Gate for the chained model: Model A = ridge trained on earlier weekends to predict the
 QUALIFYING order from what is visible before Qualifying. Compare its order, for both the
 qualifying and the race result, with the current pre-Qualifying predictors.
-Usage: python scripts/experiments/chained_gate.py   (~15 s; see docs/day2-model-notes.md section 14)"""
+Usage: python scripts/experiments/chained_gate.py   (~15 s; see docs/experiments.md)"""
 import sys, warnings; warnings.filterwarnings("ignore")
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))

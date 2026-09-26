@@ -1,137 +1,60 @@
 # F1 Race Weekend Companion
 
-A companion app that follows an F1 weekend session by session. After each session
-(FP1 → FP2 → FP3 → Qualifying, plus Sprint sessions on sprint weekends) it refreshes the
-charts for that session.
+A companion app that follows a Formula 1 weekend session by session. After each session
+(FP1 → FP2 → FP3 → Qualifying, and Sprint sessions on sprint weekends) it refreshes the charts and
+updates a prediction of the race result - for a past weekend replayed step by step, or for a live
+weekend before its race.
 
-**Status: Day 2 of a 3-day build.** Working: data pipeline, replay mode, three per-session
-charts, race-result prediction with a backtest. **Not built yet:** generated commentary,
-notifications.
+**Status: Day 3 of a 3-day build.** Built: data pipeline, replay and live weekends, per-session
+charts, race prediction with a backtest, race-result view. **Not built yet:** generated commentary,
+a "race starts soon" banner.
 
-## What you can do in the app
+## What the app does
 
-Pick a finished weekend (default: 2026 Spanish GP) and press **Next session**. Replay mode
-releases the weekend one session at a time, as if it were happening now, and the app can only
-see sessions that have already "happened". The Race is never revealed. Each session shows:
+- **Replay a finished weekend.** Pick a weekend and press **Next session**: sessions are released
+  one at a time, and the app can only see what has "happened" so far. The race is never revealed.
+- **Follow a live weekend** (🔴 LIVE in the list): the sessions run so far and a real forecast of a
+  race that has not happened yet.
+- **Per-session charts**: gap to the fastest lap, long-run pace (compared within tyre compound), tyre
+  stints.
+- **Race prediction** for the whole grid: win / podium / retirement chances to two decimals, next to
+  the result of the session it was made after, plus the starting grid once qualifying is done.
+- **Race-result view** (sidebar, finished weekends): the real result next to the prediction made
+  after any chosen session. Display only - the replay never sees race data.
+- **Backtest section**: how each predictor has scored, and a race-by-race chart of whether a model is
+  pulling ahead of the simple baseline.
 
-- **Gap to fastest lap**: best valid lap per driver
-- **Long-run pace**: lap-time spread on long stints, compared with the field on the *same*
-  compound so soft and hard runners are comparable
-- **Tyre stints**: every stint per driver, by compound
+## How the prediction works
 
-Below the charts: the race prediction for the whole grid (win / podium / retirement chances to two
-decimals) side by side with the result of the session it was made after. For finished weekends a
-separate **Race result** view (sidebar) shows the real finishing order next to the prediction made
-after any chosen session - display only; the replay itself never sees race data.
+Four predictors, and **Auto** (the default) picks between them:
 
-## Prediction and backtest
+- **Baseline** - finish in qualifying order (before Qualifying: practice pace, or the sprint grid).
+- **Grid + recovery** - the baseline, but a fast car starting out of position is expected to move
+  forward (Baku 2026: Antonelli qualified P16 after a crash → predicted P9).
+- **Ridge, all seasons / same season** - regression on relative inputs (pace ranks and gaps, long
+  runs, sprint results, form, teammate gap, tyre use), trained on earlier races only.
+- **Auto** - at each stage, whichever predictor has the best record on this season's earlier races.
 
-After each revealed session the app shows podium and win probabilities plus a typical-error
-figure (for cars that finish) that shrinks as the weekend goes on (before Qualifying there is no grid, so the guess is
-much less certain).
+Percentages come from simulating the race 20,000 times, with retirement chances per team and
+uncertainty sized from each predictor's own past mistakes. Full description:
+[docs/model.md](docs/model.md).
 
-- **Baseline:** finish in the most recent competitive order: Qualifying once it has run; on a
-  sprint weekend before that, Sprint Qualifying (the sprint grid); otherwise practice pace.
-- **Model:** ridge regression on relative features (pace ranks and gaps, long-run rank, sprint
-  order and result, in-season team and driver form), trained on earlier races only, one model
-  per stage.
-- **Probabilities:** each driver may retire (team's retirement rate so far this season, shrunk
-  toward the long-run rate), and the rest finish in predicted order plus noise that grows down
-  the order. The noise is fitted to each predictor's *own* out-of-sample errors on the previous
-  40 weekends, not to its training fit. After Qualifying the baseline also uses the **time
-  gaps**, not just the order: each car sits halfway between its grid place and its gap to pole
-  converted into places, so two cars 0.01s apart are close to a coin flip and two cars 0.5s
-  apart are not. The halfway weight was chosen on 2022-25 races only.
-- **Backtest:** expanding window over all 14 completed 2026 races, each predicted using only its
-  own already-revealed sessions plus earlier races' results. Tests scramble everything a
-  predictor must not see (later sessions, the race itself, later weekends, retirements) and
-  assert the output doesn't change.
+## How good is it
 
-**Result (mean of 14 races, after Qualifying):**
+Scored on every 2026 race so far, each predicted using only what was known at the time
+(expanding-window backtest). After Qualifying:
 
-| | Spearman with real order | Winner log-loss | Podium Brier | Whole-grid RPS |
+| | Order (Spearman ↑) | Winner log-loss ↓ | Podium Brier ↓ | Whole-grid RPS ↓ |
 |---|---|---|---|---|
 | Baseline | 0.712 | 1.02 | **0.064** | **0.104** |
 | Grid + recovery | **0.717** | 1.00 | 0.066 | **0.104** |
-| Auto (default, see below) | 0.711 | **0.97** | 0.066 | 0.105 |
+| **Auto** (default) | 0.711 | **0.97** | 0.066 | 0.105 |
 | Ridge, all seasons | 0.706 | 1.21 | 0.072 | 0.107 |
-| Ridge, 2026 only | 0.700 | 1.38 | 0.065 | 0.107 |
+| Ridge, same season | 0.700 | 1.38 | 0.065 | 0.107 |
 
-Lower is better for everything except Spearman. RPS (ranked probability score) grades each
-driver's whole distribution of finishing positions, so it covers the midfield too.
-
-In 2026 the model does **not** beat the baseline on finishing order: -0.006 after Qualifying,
-95% interval [-0.020, +0.011]. Over 2023-26 (84 races) it does: +0.11 after the first session,
-shrinking to +0.02 after Qualifying, all with intervals above zero. So the 2022-25 patterns it
-learns stopped paying off under the 2026 rules, at least early in the season: the 2026-only ridge
-starts with nothing to learn from and catches up as races accumulate.
-
-**Grid + recovery** (added 2026-09-26): the grid order, but a fast car starting out of position is
-expected to move forward by half the gap between its grid slot and where its pace says it
-belongs (mean of practice pace, teammate's qualifying position, and the team's race pace in
-earlier races). Over 2023-26 it beat the baseline by +0.018 Spearman after Qualifying (interval
-above zero); in 2026 +0.006. The recovery strength is learned from all earlier races; re-tuning
-it from only the latest race(s) - a tighter feedback loop - was tested and did worse.
-
-The app's default is therefore **Auto**: at each stage it uses whichever predictor has the best
-record on *this season's earlier races* (the baseline until three races exist), re-decided every
-race. In 2026 it switched to the 2026-only ridge before Qualifying from round 5-7 on and kept the
-baseline after Qualifying. Against always using the baseline: +0.018 after the first session,
-+0.014 after the second (interval above zero), -0.005 after the third and -0.001 after
-Qualifying, where from round 10 it uses Grid + recovery. A
-race-by-race chart in the app shows how each model's record develops through the season.
-Down-weighting 2022-25 inside the all-seasons ridge (or using it only as a prior) was also tried:
-no season 2023-26 improved.
-
-Features that only pay off later in a season: every rejected feature was retested on 2023-26 by
-whether it helped the *second half* of each season (where an in-season learner has the most
-data), in at least 3 of 4 seasons. Three passed and were added to ridge, after Qualifying only:
-gap to teammate in qualifying (all-seasons ridge), and new soft-tyre sets already used plus
-practice pace weighted towards later sessions (same-season ridge). The gains are small (+0.002 to
-+0.004 in second halves, 2026's second half not among the improved) - they are kept as a bet on
-future seasons, with Auto deciding whether ridge is used at all. Rejected: grid penalty, FP2-only
-long runs, recency-weighted form, down-weighting old seasons, and a new driver-at-this-circuit
-history feature (places gained and teammate gap at the same circuit in earlier seasons), which
-made predictions worse in every variant.
-I also tried LightGBM (regression and lambdarank), random forests, other ridge penalties and
-energy-management features built from speed traps; none beat the baseline.
-
-What did help was the probability model. Replacing one error size for every driver with
-retirements plus order-dependent noise made the win and podium chances clearly better calibrated:
-before, the pole sitter was always given about 29% to win; then about 46%. Using qualifying time
-gaps then cut the baseline's winner log-loss after Qualifying from 1.23 to 1.02 in 2026 (1.39 to
-1.25 over 2023-26, 84 races, interval below zero) with no change to whole-grid RPS, and the pole
-sitter now gets about 49% (in 2026 the pole sitter won 9 of 14).
-Sprint Qualifying beat practice pace as a guide on 2024-25 sprint weekends (0.59 vs 0.40); on
-2026's five sprint weekends it was better in four and worse in one, and level on average.
-
-Also tested and not adopted: gap to teammate, long-run pace, new tyres used, grid penalties,
-track overtaking and safety-car history, lap-1 skill, and weighting recent races when fitting
-the noise. Each either added nothing beyond qualifying or made the probabilities worse.
-
-Scoring note: until 2026-09-25 the backtest scored each race against the FP1 entry list, so race
-drivers replaced by a rookie in FP1 were left out (up to seven per race, including one winner).
-Numbers above use the corrected scoring against everyone who raced; conclusions did not change.
-
-Qualifying best laps use the official Q1-Q3 times: FastF1 only flags steward-deleted laps when
-race-control messages are loaded, and ~2.5% of stored qualifying "best laps" had been deleted laps.
-The starting grid (after penalties) is shown next to the prediction but is not a model input -
-since 2022 penalised drivers have typically recovered the lost places by the finish, and the
-qualifying order predicted the finish better (0.717 vs 0.687 in 2026). For a live weekend the grid
-comes from `data/starting_grid.csv`, entered by hand from published grids (FastF1 only has it with
-the race result).
-
-FP1 stand-ins (rookies in their mandatory FP1 outings) are dropped from the prediction once a
-later session shows their team with two other drivers.
-
-Known gaps: after FP1 alone the prediction covers the FP1 line-up, so a race driver who sat out
-FP1 is missing until FP2. Race incidents (crashes, safety cars) are independent per driver; the pole sitter is
-still slightly under-rated.
-
-Regenerate with `python scripts/backtest.py` (needs scipy from requirements-dev.txt). Detailed
-notes on every modelling question and experiment: [docs/day2-model-notes.md](docs/day2-model-notes.md).
-Routine commands for each race weekend, and experiments to repeat later in the season:
-[docs/season-checklist.md](docs/season-checklist.md).
+2026 has been unusually qualifying-dominated, so beating the grid order is hard; over 2023-26 the
+models' edges are larger and significant (e.g. Grid + recovery +0.018 after Qualifying). What each
+score means, all stages, and how differences are judged: [docs/evaluation.md](docs/evaluation.md).
 
 ## Run locally
 
@@ -140,32 +63,61 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
-The app reads only the derived files in `data/` and does **not** need FastF1 or network access.
+The app reads only the files in `data/`; it needs neither FastF1 nor network access.
 
-## Rebuild the data (optional)
+## Keep it up to date
 
 ```bash
 pip install -r requirements-dev.txt
-python scripts/backfill.py --years 2026            # or 2022 2023 2024 2025
+python scripts/backfill.py --years 2026 --in-progress   # during a weekend: sessions run so far
+python scripts/backfill.py --years 2026                 # after the race
+python scripts/backtest.py                              # re-score and re-predict
 python -m pytest tests
 ```
 
-Notes from building this:
-- FastF1 is rate-limited (~500 API calls/hour). The backfill waits and retries instead of
-  skipping, and takes many hours for a cold multi-year pull. Cached sessions rebuild in minutes.
-- The backfill skips sessions already in `data/`. After changing `f1cc/features.py`, delete
-  `data/*.parquet` and re-run it; otherwise old rows are silently kept. `tests/test_data_freshness.py`
-  fails if stored data no longer matches the current code.
+Then commit `data/` and push; the deployed app reloads its code on its own. The full routine,
+traps (rate limits, pulling too early, offline rebuilds) and what to re-check through the season:
+[docs/season-checklist.md](docs/season-checklist.md).
+
+## Documentation
+
+| Document | Contents |
+|---|---|
+| [docs/model.md](docs/model.md) | Pipeline diagram, every input, the predictors, how percentages are made, data rules, settings |
+| [docs/evaluation.md](docs/evaluation.md) | The backtest, every metric with formulas and worked examples, significance rules, current results |
+| [docs/experiments.md](docs/experiments.md) | Everything tried - kept and rejected - with numbers |
+| [docs/faq.md](docs/faq.md) | Concepts and questions (methods, Auto, grid vs qualifying, the data) |
+| [docs/season-checklist.md](docs/season-checklist.md) | Weekly routine, periodic re-checks, end-of-season tasks, ideas not built yet |
+
+## Project layout
+
+```
+app.py                     Streamlit app (presentation only)
+f1cc/data.py               FastF1 access, event-match guard, live-session timing
+f1cc/features.py           per-driver-per-session features from FastF1 sessions
+f1cc/store.py              parquet storage in data/, starting grids
+f1cc/replay.py             replay cutoff: which sessions are visible
+f1cc/charts.py             Plotly figures (no Streamlit inside)
+f1cc/predict/              feature matrix, baseline, recovery, ridge, simulation
+f1cc/backtest_summary.py   summaries, significance, Auto
+scripts/backfill.py        pull sessions from FastF1 into data/
+scripts/backtest.py        backtest + stored predictions
+scripts/experiments/       reusable experiments (season trend, feature retest, chained model)
+tests/                     leakage, data integrity, freshness, app smoke tests
+```
 
 ## Data and known limitations
 
-- Data comes from [FastF1](https://github.com/theOehrly/Fast-F1), which reads Formula 1's public
-  timing feed. Coverage here: 2022-2026, 460 sessions.
-- Long-run pace is confounded by fuel load, which the feed does not expose. Treat it as a
-  relative signal, not an absolute one.
-- Long-run comparison uses dry compounds only, so wet sessions show few or no long runs.
-- Official team colours changed mid-season in 2024 and 2025; each round uses its own palette.
-- Several team colours are close (e.g. Williams / Red Bull blues), so every mark is also labelled
-  with its driver code rather than relying on colour alone.
+- Data from [FastF1](https://github.com/theOehrly/Fast-F1) (Formula 1's public timing feed),
+  2022-2026, 460+ sessions. FastF1 is rate-limited (~500 calls/hour); cached sessions rebuild in
+  minutes.
+- Long-run pace is confounded by fuel load, which the feed does not expose; wet sessions have few
+  long runs (dry compounds only).
+- Race incidents (crashes, safety cars) are modelled as independent per driver; the pole sitter is
+  still slightly under-rated (~49% vs 9 of 14 poles converted in 2026).
+- After FP1 alone, a race driver who sat out FP1 for a rookie is missing from the prediction until
+  FP2. Practice "best laps" may include steward-deleted laps (qualifying uses official times).
+- Team colours change between and within seasons, and several are close (Williams / Red Bull), so
+  every chart mark is also labelled with the driver code.
 
 *Unofficial fan project. Not affiliated with or endorsed by Formula 1, the FIA, or any team.*

@@ -1,8 +1,8 @@
 # Season checklist: routine runs, re-checks and ideas for later
 
 Reminders for keeping the companion current through the rest of 2026 and into 2027, and for
-the experiments worth repeating once more races exist. Background on every decision is in
-[day2-model-notes.md](day2-model-notes.md). All commands run from the repo root with the dev
+the experiments worth repeating once more races exist. Background on every decision: [model.md](model.md),
+[evaluation.md](evaluation.md), [experiments.md](experiments.md). All commands run from the repo root with the dev
 environment (`pip install -r requirements-dev.txt`).
 
 ---
@@ -38,7 +38,7 @@ Traps:
 | The three Day 2b additions still earning their place | same script with `+tm_delta all`, `combo_season season` | If their 2nd-half gains turn negative across seasons, remove them from `AFTER_Q` |
 | Recovery strength | `RecoveryPredictor(...).gamma(year, round)` and Auto's picks (`season_trend.py`) | γ is re-learned from all earlier races each weekend; if 2026 keeps showing no recovery, it drifts down on its own |
 | Chained model (practice → qualifying → race) | `python scripts/experiments/chained_gate.py` | Model A beating the direct ridge on *race* order by more than ~0.01 across seasons |
-| Race-vs-qualifying gains start persisting in 2026 | Not scripted: correlate each driver's mean places gained vs qualifying in earlier 2026 races with the next race's (method in notes §10, "battery-management proxies") | Positive persistence again at driver/team level → retest `+gain_form` |
+| Race-vs-qualifying gains start persisting in 2026 | Not scripted: correlate each driver's mean places gained vs qualifying in earlier 2026 races with the next race's (method: [experiments.md](experiments.md), battery section) | Positive persistence again at driver/team level → retest `+gain_form` |
 
 Parallel runs: `printf '%s\n' "control all" "+gain_form all" ... | xargs -P 4 -L 1 python scripts/experiments/feature_retest.py --out experiments_out`
 (then `python scripts/experiments/evaluate_retest.py experiments_out`). ~5-10 min per run.
@@ -65,7 +65,7 @@ Parallel runs: `printf '%s\n' "control all" "+gain_form all" ... | xargs -P 4 -L
 - [ ] Decide whether 2026 now belongs in the all-seasons ridge's training data unchanged (it is
       the same regulation era as 2027, unlike 2022-25).
 - [ ] Retest the regulation-sensitive ideas with 2026 as history: down-weighting pre-2026 seasons
-      (`+old_x0.5`), the energy/speed-trap features (§7 of the notes; needs speed traps
+      (`+old_x0.5`), the energy/speed-trap features ([experiments.md](experiments.md); needs speed traps
       extracted - see §5 below), and circuit history (Madrid gets its first previous visit).
 - [ ] FastF1 upgrade: bump `requirements-dev.txt`, then run `tests/test_data_freshness.py` - a
       new FastF1 can change extracted values silently.
@@ -88,4 +88,4 @@ Parallel runs: `printf '%s\n' "control all" "+gain_form all" ... | xargs -P 4 -L
 Tyre-age and fuel-proxy long-run corrections; battery proxies from speed-trap fade and from
 race-vs-qualifying gains; recency-weighted noise fitting; sorting by simulated average
 position; LightGBM / random forest; lap-1 skill, practice mileage, pit-lane starts, team pit
-times, track overtaking and safety-car history. Details and numbers: notes §10-14.
+times, track overtaking and safety-car history. Details and numbers: [experiments.md](experiments.md).
