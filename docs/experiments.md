@@ -39,6 +39,7 @@ important ones are in `scripts/experiments/` (see [season-checklist.md](season-c
 | Circuit-specific noise (scale by the circuit's past unpredictability) | No effect on any score; ≤ 4 past visits per circuit |
 | One overall noise correction for 2026's overstatement | The noise was honest in 2022-25 (actual/claimed 0.95-1.06), only 2026 overstated (0.71); fixed by the *shape* change instead |
 | Noise shape for the ridges | Podium Brier and RPS after Q significantly worse; kept at scale 1 |
+| Ridge input "places behind pace × track ease" (the Grid + recovery signal, after Qualifying) | Fails the second-half rule for both ridges (2 of 4 seasons); order −0.0005 / −0.0010; same-season winner log-loss significantly worse (+0.016). Ridge already sees the ingredients, and one linear weight dilutes a signal that is zero for almost every driver |
 | Ridge noise fitted by maximising the likelihood of actual finishing positions (two scales: top six, rest; learned per race) | Widened ridge's noise almost everywhere (×1.2-1.5). RPS before Q significantly better, but winner log-loss after Q significantly worse (+0.07/+0.08 over 2023-26, +0.10/+0.13 in 2026). Ridge's weakness is its front *order*, not its noise |
 | Sorting by simulated average / median position | 2026 after Q −0.012, worse in 11 of 14: a retirement is all or nothing |
 | Chained model (practice → qualifying → race) | Qualifying-trained model 0.626 vs direct ridge 0.624 for the race: level; no late-season or cross-season gain. Best use: a pole forecast (+0.06 on qualifying) |
