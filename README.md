@@ -53,6 +53,8 @@ Scored on the first 15 races of 2026 (R1-R15), each predicted using only what wa
 | Ridge, all seasons | 0.699 | 1.18 | 0.075 | 0.110 |
 | Ridge, same season | 0.692 | 1.34 | **0.068** | 0.110 |
 
+The model is **frozen** at tag `frozen-2026-r15`; races from R16 on are an untouched holdout
+(results in [docs/evaluation.md](docs/evaluation.md#6-frozen-model-and-holdout)).
 2026 has been unusually qualifying-dominated, so beating the grid order is hard; over 2023-26 the
 models' edges are larger and significant (e.g. Grid + recovery +0.018 after Qualifying). What each
 score means, all stages, and how differences are judged: [docs/evaluation.md](docs/evaluation.md).

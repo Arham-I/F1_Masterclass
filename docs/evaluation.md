@@ -140,3 +140,23 @@ Qualifying. Baku (R15, 7 retirements) pulled every order score down.
 | 2026-09-25 | ~2.5% of qualifying "best laps" were **steward-deleted laps** (FastF1 flags them only with race-control messages) | Official Q1-Q3 times; practice still affected (see the checklist) |
 
 Neither changed a conclusion; all numbers here are after both fixes.
+
+## 6. Frozen model and holdout
+
+From 2026-09-28 the model design is **frozen at git tag `frozen-2026-r15`**.
+
+| | Races | Role |
+|---|---|---|
+| Development | 2022 → 2026 R15 (Azerbaijan) | Everything was built, tested and chosen on these |
+| **Holdout** | **2026 R16 → R23** | Only measured; no setting, feature or rule changes because of them |
+
+"Frozen" fixes the design, not what the model learns: after every race it still refits ridge,
+the noise sizes and shapes, retirement rates, form, the recovery strength and Auto's choice, by the
+same rules, from races already run - exactly as it would in real use. A change made in response
+to a holdout result ends the holdout for the races that prompted it; any new version then needs
+fresh races to be judged. Holdout results are reported separately below as they come in.
+
+| Holdout race | Auto after Qualifying: Spearman | Winner log-loss | Podium Brier | RPS |
+|---|---|---|---|---|
+| (none yet) | | | | |
+
