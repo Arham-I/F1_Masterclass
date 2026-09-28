@@ -137,6 +137,20 @@ def test_recovery_strength_is_learned_from_earlier_races_only(features):
     assert g(features) == g(_scramble(features, later))
 
 
+def test_noise_shape_learned_from_earlier_races_only_and_never_reorders(features):
+    later = (features["year"] == YEAR) & (features["round"] >= ROUND)
+    scales = lambda f: [BaselinePredictor(f, FeatureBuilder(f)).sigma_scale(YEAR, ROUND, k) for k in (1, 4)]
+    assert scales(features) == scales(_scramble(features, later))
+    b = FeatureBuilder(features)
+    assert RidgePredictor(features, b).sigma_scale(YEAR, ROUND, 4) == 1.0       # ridges keep their noise
+    shaped = BaselinePredictor(features, b).predict(Cutoff(b.weekend(YEAR, ROUND), 4))
+    plain = BaselinePredictor(features, b); plain.shape_noise = False
+    flat = plain.predict(Cutoff(b.weekend(YEAR, ROUND), 4))
+    np.testing.assert_array_equal(shaped["driver"], flat["driver"])             # the order is untouched
+    front = shaped["expected_pos"] <= 6
+    assert (shaped.loc[~front, "sigma"].to_numpy() == flat.loc[~front, "sigma"].to_numpy()).all()
+
+
 def test_retirement_chance_uses_this_seasons_earlier_races_only(features):
     b = FeatureBuilder(features)
     teams = b.matrix(YEAR, ROUND, 4)["team"]

@@ -36,21 +36,22 @@ Four predictors, and **Auto** (the default) picks between them:
 - **Auto** - at each stage, whichever predictor has the best record on this season's earlier races.
 
 Percentages come from simulating the race 20,000 times, with retirement chances per team and
-uncertainty sized from each predictor's own past mistakes. Full description:
+uncertainty sized - and, for the baseline and Grid + recovery, shaped (wider before Qualifying,
+tighter for the front six after it) - from each predictor's own past mistakes. Full description:
 [docs/model.md](docs/model.md).
 
 ## How good is it
 
-Scored on every 2026 race so far, each predicted using only what was known at the time
+Scored on the first 15 races of 2026 (R1-R15), each predicted using only what was known at the time
 (expanding-window backtest). After Qualifying:
 
 | | Order (Spearman ↑) | Winner log-loss ↓ | Podium Brier ↓ | Whole-grid RPS ↓ |
 |---|---|---|---|---|
-| Baseline | 0.712 | 1.02 | **0.064** | **0.104** |
-| Grid + recovery | **0.717** | 1.00 | 0.066 | **0.104** |
-| **Auto** (default) | 0.711 | **0.97** | 0.066 | 0.105 |
-| Ridge, all seasons | 0.706 | 1.21 | 0.072 | 0.107 |
-| Ridge, same season | 0.700 | 1.38 | 0.065 | 0.107 |
+| Baseline | 0.697 | 0.78 | 0.070 | 0.108 |
+| Grid + recovery | **0.709** | **0.75** | 0.071 | **0.107** |
+| **Auto** (default) | 0.703 | 0.76 | **0.068** | **0.107** |
+| Ridge, all seasons | 0.699 | 1.18 | 0.075 | 0.110 |
+| Ridge, same season | 0.692 | 1.34 | **0.068** | 0.110 |
 
 2026 has been unusually qualifying-dominated, so beating the grid order is hard; over 2023-26 the
 models' edges are larger and significant (e.g. Grid + recovery +0.018 after Qualifying). What each
@@ -113,8 +114,8 @@ tests/                     leakage, data integrity, freshness, app smoke tests
   minutes.
 - Long-run pace is confounded by fuel load, which the feed does not expose; wet sessions have few
   long runs (dry compounds only).
-- Race incidents (crashes, safety cars) are modelled as independent per driver; the pole sitter is
-  still slightly under-rated (~49% vs 9 of 14 poles converted in 2026).
+- Race incidents (crashes, safety cars) are modelled as independent per driver. The pole sitter now
+  gets ~67% on average after Qualifying (10 of 15 poles converted in 2026).
 - After FP1 alone, a race driver who sat out FP1 for a rookie is missing from the prediction until
   FP2. Practice "best laps" may include steward-deleted laps (qualifying uses official times).
 - Team colours change between and within seasons, and several are close (Williams / Red Bull), so

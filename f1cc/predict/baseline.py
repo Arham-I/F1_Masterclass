@@ -19,6 +19,7 @@ TIME_WEIGHT = 0.5
 class BaselinePredictor(SimulatedPredictor):
     name = "Baseline (grid, else practice pace)"
     use_sprint = True
+    shape_noise = True
 
     def _score(self, m: pd.DataFrame, year: int = 0, round_number: int = 0, k: int = 0) -> np.ndarray:
         return self.score(m, self.use_sprint)

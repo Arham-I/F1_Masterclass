@@ -37,7 +37,8 @@ What was tried along the way: [experiments.md](experiments.md). Concepts: [faq.m
                  place = rank of score  ──►  expected_pos (the predicted order)
                                                │
       ├─ noise sigma(place) = a + b·place, fitted to this predictor's own out-of-sample
-      │  errors on the previous 40 weekends (cars that finished)
+      │  errors on the previous 40 weekends (cars that finished); baseline and recovery then
+      │  reshape it: wider for everyone before Qualifying, tighter for the top six after it
       ├─ retirement chance per team: this season's rate, shrunk toward the long-run rate
       └─ centre: after Qualifying (baseline, recovery) halfway between the place and the
          gap to pole converted into places ("time scale"); recovery shifts it forward too
@@ -101,6 +102,11 @@ same tyre. The starting grid after penalties is **shown** but is not an input (s
 2. **Noise size** `sigma(place) = a + b·place`: fitted to the predictor's *own* mistakes on the
    previous 40 weekends (predictions made without knowing those results), among cars that
    finished. Front-runners' results scatter less than the midfield's.
+   **Noise shape** (baseline and Grid + recovery only): before each race a scale is chosen from
+   the previous 40 weekends - before Qualifying for everyone (×1-2), after Qualifying for the
+   predicted top six only (×0.5-1) - picking the best winner log-loss among scales that do not
+   worsen the whole-grid RPS. Practice-based orders had been over-trusted and the front-runners'
+   noise was too wide. The ridges keep scale 1 (the reshaping made their podium and RPS worse).
 3. **Retirement chance** per team: its retirement rate so far this season, blended with the rate
    of all earlier races (worth 20 starts). Starting position adds no measurable extra risk.
 4. **Centre** (after Qualifying, baseline and recovery): halfway between the grid place and the
@@ -135,4 +141,5 @@ same tyre. The starting grid after penalties is **shown** but is not an input (s
 | `TEAM_SHRINK`, `DRIVER_SHRINK` | 4, 2 races | `base.py` | Fixed |
 | `PRIOR_POS` | 10.5 | `base.py` | Midpoint of a 20-car field (2026 has 22: a known wart) |
 | `MIN_RACES` (Auto) | 3 | `backtest_summary.py` | Fixed |
+| Noise-shape scales | before Q ×1-2, after Q top six ×0.5-1, learned per race | `base.py` | Best winner log-loss on the previous 40 weekends without worse RPS |
 | Simulation runs | 20,000 | `base.py` | ±0.3 pt precision |

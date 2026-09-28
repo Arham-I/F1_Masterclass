@@ -31,6 +31,15 @@ DNF_SHRINK = 20.0          # pseudo-starts of the long-run retirement rate mixed
 ERROR_WINDOW = 40          # earlier weekends whose prediction errors size the noise
 MIN_SIGMA = 0.75           # places; even a dominant pole sitter is never a certainty
 FALLBACK_SIGMA = 3.5       # places, when there are no earlier errors to learn from
+# Shape of the noise, learned per race from the predictor's own earlier races (docs/experiments.md):
+# before Qualifying practice-based orders were over-trusted (widen everyone), after Qualifying the
+# front-runners' noise was too wide (narrow the predicted top six only). Used by the baseline and
+# Grid + recovery; it made both ridges' podium and whole-grid scores worse, so they keep scale 1.
+PRE_Q_SCALES = (1.0, 1.15, 1.3, 1.5, 1.75, 2.0)
+FRONT_SCALES = (0.5, 0.6, 0.7, 0.8, 0.9, 1.0)
+FRONT_N = 6
+RPS_TOLERANCE = 0.0005     # a scale may not worsen the whole-grid score by more than this
+SELECT_SIMS = 5000         # runs per candidate when scoring earlier races
 SPRINT_QUALI = ("Sprint Qualifying", "Sprint Shootout")
 FINISHED = ("Finished", "Lapped")
 FEATURES = ["prac_rank", "prac_gap_pct", "lr_rank", "sprint_rank", "sprint_pos", "q_pos", "q_gap_pct",
@@ -249,11 +258,14 @@ class SimulatedPredictor:
     weekends (each made without that weekend's result) against what actually happened."""
 
     name = "?"
+    shape_noise = False   # learn the before/after-Qualifying noise scales (see sigma_scale)
 
     def __init__(self, features: pd.DataFrame | None, builder: FeatureBuilder | None = None):
         self.builder = builder or FeatureBuilder(features)
         self._points: dict[tuple[int, int, int], np.ndarray] = {}
         self._errors: dict[tuple[int, int, int], tuple[float, float]] = {}
+        self._scale_scores_memo: dict[tuple[int, int, int], dict | None] = {}
+        self._scales: dict[tuple[int, int, int], float] = {}
 
     def _score(self, m: pd.DataFrame, year: int, round_number: int, k: int) -> np.ndarray:
         raise NotImplementedError
@@ -302,11 +314,64 @@ class SimulatedPredictor:
         sigma = np.maximum(MIN_SIGMA, np.sqrt(np.pi / 2) * (a + b * place))   # |N(0,s)| has mean s*sqrt(2/pi)
         return m, score, place, sigma, self.builder.dnf_prob(year, round_number, m["team"])
 
+    @staticmethod
+    def _shaped(m: pd.DataFrame, place: np.ndarray, sigma: np.ndarray, scale: float) -> np.ndarray:
+        """Before Qualifying the scale applies to everyone; after it, to the predicted top six."""
+        if m["q_pos"].isna().all():
+            return sigma * scale
+        return np.where(place <= FRONT_N, sigma * scale, sigma)
+
+    def _scale_scores(self, year: int, round_number: int, k: int) -> dict | None:
+        """For one finished weekend: winner log-loss and RPS of this predictor's distribution at
+        each candidate scale (the scale grid depends on whether Qualifying is visible)."""
+        key = (year, round_number, k)
+        if key not in self._scale_scores_memo:
+            out = None
+            m = self.builder.matrix(year, round_number, k)
+            if len(m) >= 10:
+                m, _, place, sigma, p_dnf = self.noise(year, round_number, k)
+                act = m["driver"].map(self.builder.result(year, round_number).set_index("driver")["position"])
+                ok = act.notna().to_numpy()
+                if ok.sum() >= 10:
+                    q_seen = bool(m["q_pos"].notna().any())
+                    center = self._center(m, place, year, round_number, k)
+                    actual_place = act[ok].rank(method="first").to_numpy()
+                    winner = int(np.nanargmin(act.to_numpy(dtype=float)))
+                    out = {"q_seen": q_seen}
+                    for scale in (FRONT_SCALES if q_seen else PRE_Q_SCALES):
+                        dist = position_distribution(center, self._shaped(m, place, sigma, scale), p_dnf,
+                                                     n=SELECT_SIMS)
+                        out[scale] = (-np.log(max(dist[winner, 0], 1e-4)), rps(dist[ok], actual_place))
+            self._scale_scores_memo[key] = out
+        return self._scale_scores_memo[key]
+
+    def sigma_scale(self, year: int, round_number: int, k: int) -> float:
+        """The scale with the best winner log-loss on the previous ``ERROR_WINDOW`` weekends (same
+        stage, same before/after-Qualifying situation) among those that do not worsen the whole-grid
+        RPS by more than ``RPS_TOLERANCE``. 1 (no change) without enough history."""
+        key = (year, round_number, k)
+        if not self.shape_noise:
+            return 1.0
+        if key not in self._scales:
+            q_seen = bool(self.builder.matrix(year, round_number, k)["q_pos"].notna().any())
+            hist = [self._scale_scores(y, r, k) for (y, r) in self.builder.weekends_before(year, round_number)[-ERROR_WINDOW:]]
+            hist = [h for h in hist if h and h["q_seen"] == q_seen]
+            choice = 1.0
+            if len(hist) >= 10:
+                grid = FRONT_SCALES if q_seen else PRE_Q_SCALES
+                ll = {s: np.mean([h[s][0] for h in hist]) for s in grid}
+                rp = {s: np.mean([h[s][1] for h in hist]) for s in grid}
+                allowed = [s for s in grid if rp[s] <= rp[1.0] + RPS_TOLERANCE]
+                choice = float(min(allowed, key=lambda s: ll[s]))
+            self._scales[key] = choice
+        return self._scales[key]
+
     def predict(self, cutoff: Cutoff) -> pd.DataFrame:
         w, k = cutoff.weekend, cutoff.revealed
         if self.builder.matrix(w.year, w.round, k).empty:
             return pd.DataFrame(columns=OUTPUT)
         m, score, place, sigma, p_dnf = self.noise(w.year, w.round, k)
+        sigma = self._shaped(m, place, sigma, self.sigma_scale(w.year, w.round, k))
         dist = position_distribution(self._center(m, place, w.year, w.round, k), sigma, p_dnf)
         out = m[["driver", "team", "team_color"]].copy()
         out["score"], out["expected_pos"], out["sigma"], out["p_dnf"] = score, place.astype(int), sigma, p_dnf

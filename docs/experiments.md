@@ -2,7 +2,8 @@
 
 Every modelling idea tested so far, with its result. Unless marked otherwise, numbers are
 Spearman (order) or winner log-loss / podium Brier / RPS (probabilities) from the backtest in
-[evaluation.md](evaluation.md): "2026" = 14 races, "2023-26" = 84 races. Scripts to repeat the
+[evaluation.md](evaluation.md): "2026" = 14 races (15 for the noise-shape change, which came after
+Baku), "2023-26" = 84 races. Scripts to repeat the
 important ones are in `scripts/experiments/` (see [season-checklist.md](season-checklist.md)).
 
 ---
@@ -22,7 +23,8 @@ important ones are in `scripts/experiments/` (see [season-checklist.md](season-c
 | Day 2b | After-Q ridge inputs passing the second-half rule: teammate gap (all seasons); new softs + weighted practice pace (same season) | +0.002 to +0.004 in second halves; a bet on future seasons |
 | Day 3 | Official Q1-Q3 times for qualifying best laps | Fixes deleted laps (2.5% of results) |
 | Day 3 | Starting grid shown (not an input); live weekends predicted before the race | - |
-| Day 3 | **Grid + recovery** predictor | After Q +0.018 over 2023-26 [+0.007, +0.030], +0.006 in 2026; Auto uses it after Q from R10 |
+| Day 3 | **Grid + recovery** predictor | After Q +0.018 over 2023-26 [+0.007, +0.030], +0.006 in 2026; Auto uses it after Q from R10. Baku (R15): Antonelli P16 → P5, predicted P9 |
+| Day 3 | **Noise shape** for baseline and Grid + recovery: scale learned per race, wider before Q, top six tighter after Q | Order unchanged. Winner log-loss better 2023-26 (−0.04 to −0.06), after Q in 3 of 4 seasons; 2026 after Q −0.19/−0.21 (significant); RPS before Q significantly better; podium Brier after Q +0.001 (n.s.). Pole sitter's average win % 49 → 67 |
 
 ## 2. Rejected
 
@@ -33,6 +35,9 @@ important ones are in `scripts/experiments/` (see [season-checklist.md](season-c
 | More simulation runs / bootstrap resamples | 20,000 runs: win % ±0.3 pt; 4,000 resamples: interval edges ±0.0004. Leave |
 | Choosing the time-scale weight race by race (40-race window, by RPS) | Flipped on noise (picked "off" at Monza, where it helped most). Fixed at 0.5 instead |
 | Weighting this season's errors more when fitting the noise | 2026 winner log-loss 1.888 → 1.906; the overstated error is mostly midfield |
+| Circuit-specific noise (scale by the circuit's past unpredictability) | No effect on any score; ≤ 4 past visits per circuit |
+| One overall noise correction for 2026's overstatement | The noise was honest in 2022-25 (actual/claimed 0.95-1.06), only 2026 overstated (0.71); fixed by the *shape* change instead |
+| Noise shape for the ridges | Podium Brier and RPS after Q significantly worse; kept at scale 1 |
 | Sorting by simulated average / median position | 2026 after Q −0.012, worse in 11 of 14: a retirement is all or nothing |
 | Chained model (practice → qualifying → race) | Qualifying-trained model 0.626 vs direct ridge 0.624 for the race: level; no late-season or cross-season gain. Best use: a pole forecast (+0.06 on qualifying) |
 | Auto variants (history-based record, last 8 races, RPS criterion, blends) | Before Q, adding earlier seasons' record improves winner log-loss (−0.04, significant); after Q the current rule is best; blends improve RPS but hurt the order. Kept as is by choice |

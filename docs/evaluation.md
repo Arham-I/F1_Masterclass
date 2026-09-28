@@ -90,7 +90,7 @@ little, far misses a lot. The only score that judges the midfield's probabilitie
 - **Paired bootstrap.** Two versions are compared race by race; the per-race differences are
   resampled 4,000 times. If the 95% interval of the mean difference excludes zero, the difference
   is taken as real. Races, not drivers, are the independent units.
-- **Not significant ≠ equal.** With 14 races a modest real effect can hide inside the interval.
+- **Not significant ≠ equal.** With 15 races a modest real effect can hide inside the interval.
 - **Many comparisons.** About 1 in 20 comparisons is "significant" by chance; results that only
   appear once, in one metric, are treated with suspicion.
 - **Choose on one set, test on another.** Settings are picked on 2022-25 (or on earlier races) and
@@ -103,31 +103,34 @@ little, far misses a lot. The only score that judges the midfield's probabilitie
 with the others as a check; changes to the probabilities (retirements, noise, time scale) -
 winner log-loss, podium Brier and RPS (the order does not change); Auto - Spearman only, by choice.
 
-## 4. Current results (2026, 14 scored races)
+## 4. Current results (2026, R1-R15: the development races)
 
 | Stage | Predictor | Spearman | Winner log-loss | Podium Brier | RPS |
 |---|---|---|---|---|---|
-| After 1st session | Baseline | 0.639 | 2.22 | 0.085 | 0.118 |
-| | Ridge, all seasons | 0.657 | **1.77** | 0.089 | 0.120 |
-| | Ridge, same season | **0.660** | 2.01 | 0.091 | **0.117** |
-| | Auto | 0.656 | 2.05 | 0.091 | **0.117** |
-| After 2nd session | Baseline | 0.663 | 2.05 | **0.081** | 0.116 |
-| | Ridge, same season | **0.679** | 1.91 | **0.081** | 0.114 |
-| | Auto | 0.678 | 1.93 | **0.079** | **0.113** |
-| After 3rd session | Baseline | **0.687** | 1.84 | **0.075** | **0.111** |
-| | Ridge, all seasons | 0.674 | **1.65** | 0.083 | 0.115 |
-| | Auto | 0.682 | 1.85 | **0.075** | **0.111** |
-| **After Qualifying** | Baseline | 0.712 | 1.02 | **0.064** | **0.104** |
-| | **Grid + recovery** | **0.717** | 1.00 | 0.066 | **0.104** |
-| | Ridge, all seasons | 0.706 | 1.21 | 0.072 | 0.107 |
-| | Ridge, same season | 0.700 | 1.38 | 0.065 | 0.107 |
-| | **Auto** (app default) | 0.711 | **0.97** | 0.066 | 0.105 |
+| After 1st session | Baseline | 0.642 | 2.11 | **0.085** | **0.118** |
+| | Ridge, all seasons | 0.657 | **1.75** | 0.092 | 0.122 |
+| | Ridge, same season | **0.660** | 1.94 | 0.093 | **0.118** |
+| | Auto | 0.657 | 1.97 | 0.092 | 0.119 |
+| After 2nd session | Baseline | 0.662 | 1.96 | **0.082** | 0.118 |
+| | Ridge, same season | **0.678** | 1.85 | **0.082** | **0.115** |
+| | Auto | 0.676 | 1.86 | **0.082** | **0.115** |
+| After 3rd session | Baseline | 0.682 | 1.80 | **0.076** | **0.113** |
+| | Ridge, all seasons | 0.671 | **1.61** | 0.085 | 0.117 |
+| | Ridge, same season | **0.684** | 1.80 | 0.079 | 0.114 |
+| | Auto | 0.677 | 1.81 | **0.076** | **0.113** |
+| **After Qualifying** | Baseline | 0.697 | 0.78 | 0.070 | 0.108 |
+| | **Grid + recovery** | **0.709** | **0.75** | 0.071 | **0.107** |
+| | Ridge, all seasons | 0.699 | 1.18 | 0.075 | 0.110 |
+| | Ridge, same season | 0.692 | 1.34 | **0.068** | 0.110 |
+| | **Auto** (app default) | 0.703 | 0.76 | **0.068** | **0.107** |
 
-Grid + recovery equals the baseline before Qualifying. Over 2023-26 (84 races): ridge beats the
-baseline on order at every stage (+0.11 after the first session, +0.02 after Qualifying, intervals
-above zero); Grid + recovery beats it after Qualifying by +0.018 [+0.007, +0.030]; the time scale
-cut winner log-loss 1.39 → 1.25. In 2026 qualifying has been unusually decisive (finishers vs
-qualifying order 0.87), which narrows every model's edge after Qualifying.
+Grid + recovery equals the baseline before Qualifying (its noise scales are learned separately,
+hence tiny differences). Over 2023-26 (84 races): ridge beats the baseline on order at every stage
+(+0.11 after the first session, +0.02 after Qualifying, intervals above zero); Grid + recovery
+beats it after Qualifying by +0.018 [+0.007, +0.030]; the time scale cut winner log-loss
+1.39 → 1.25, and the noise shape a further 0.04-0.06. In 2026 qualifying has been unusually
+decisive (finishers vs qualifying order 0.87), which narrows every model's edge after
+Qualifying. Baku (R15, 7 retirements) pulled every order score down.
 
 ## 5. Scoring corrections
 
