@@ -81,6 +81,8 @@ Conclusion: energy management changes lap times but creates no repeatable winner
 | Ignore a teammate's crashed qualifying in the pace estimate | −0.002 over 2023-26: averaging three estimates already absorbs it |
 | Extra retirement risk when starting at the back | Explained by team reliability; fast cars out of position show none |
 | Recovery strength by circuit overtaking difficulty (circuits split by how closely the finish followed the grid there in earlier races; one strength per group) | Slightly worse: −0.002 over 2023-26, −0.005 in 2026 (better in 3 races, worse in 5). The difficulty measure is noise with ~4 earlier visits per circuit (Monza came out "hard to overtake"); published overtake counts would be cleaner but transfer poorly to the 2026 rules |
+| Same with 2000-2025 history (518 races from Jolpica/Ergast; each race measured relative to its own season so eras compare) | Circuit overtaking difficulty is **not stable across eras** (2000-12 vs 2013-25: −0.12 over 23 circuits; it reflects how spread out the cars are, not the track). Recovery by long-history difficulty: +0.0002 over 2023-26, −0.005 in 2026 |
+| Retirement chance scaled by the circuit's 2000-2025 retirement rate (shrunk, 5 visits) | Track retirement tendency is real and fairly stable (0.44 across eras; Albert Park ~1.4×, Baku/Jeddah ~1.2×) but too small to matter: RPS −0.0002 (2026 −0.0006), winner odds ±0.001, all n.s. Safety cars (data only from 2018) not tested separately |
 | Auto using first-half / second-half-of-season records | Covered by the last-8-races variant: worse; no significant within-season shift found |
 
 ## 3. Race-by-race review (2026, first 14 races)
