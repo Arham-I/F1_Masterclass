@@ -45,6 +45,11 @@ driver starting behind his car's pace moves up `0.5 × ease × (grid slot − pa
 is how easy the circuit is to overtake on (Monaco ~0.4, most tracks ~1). Baku 2026:
 Antonelli qualified P16 after a Q1 crash, pace slot ~P2 → predicted P9.
 
+**Does recovery also push back slow cars that qualified high?** No, and on purpose: tested, it
+made the order worse. Cars that out-qualify their pace by 5+ places typically finish where they
+started (track position, and a good qualifying is often real pace); they only drop in the
+prediction when a faster car recovers past them.
+
 **How does Auto work, and does it learn from the latest race?** For each stage it averages each
 predictor's Spearman over this season's scored races and uses the best one (the baseline until
 three races exist). After a race is backfilled and scored (`backfill.py`, then `backtest.py`), the
