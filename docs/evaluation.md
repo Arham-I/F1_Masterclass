@@ -119,15 +119,15 @@ winner log-loss, podium Brier and RPS (the order does not change); Auto - Spearm
 | | Ridge, same season | **0.684** | 1.80 | 0.079 | 0.114 |
 | | Auto | 0.677 | 1.81 | **0.076** | **0.113** |
 | **After Qualifying** | Baseline | 0.697 | 0.78 | 0.070 | 0.108 |
-| | **Grid + recovery** | **0.709** | **0.75** | 0.071 | **0.107** |
+| | **Grid + recovery** | **0.709** | 0.75 | 0.070 | **0.107** |
 | | Ridge, all seasons | 0.699 | 1.18 | 0.075 | 0.110 |
 | | Ridge, same season | 0.692 | 1.34 | **0.068** | 0.110 |
-| | **Auto** (app default) | 0.703 | 0.76 | **0.068** | **0.107** |
+| | **Auto** (app default) | 0.704 | **0.745** | 0.069 | 0.108 |
 
 Grid + recovery equals the baseline before Qualifying (its noise scales are learned separately,
 hence tiny differences). Over 2023-26 (84 races): ridge beats the baseline on order at every stage
 (+0.11 after the first session, +0.02 after Qualifying, intervals above zero); Grid + recovery
-beats it after Qualifying by +0.018 [+0.007, +0.030]; the time scale cut winner log-loss
+beats it after Qualifying by +0.021 [+0.011, +0.031] (with track-dependent recovery); the time scale cut winner log-loss
 1.39 → 1.25, and the noise shape a further 0.04-0.06. In 2026 qualifying has been unusually
 decisive (finishers vs qualifying order 0.87), which narrows every model's edge after
 Qualifying. Baku (R15, 7 retirements) pulled every order score down.
@@ -143,7 +143,9 @@ Neither changed a conclusion; all numbers here are after both fixes.
 
 ## 6. Frozen model and holdout
 
-From 2026-09-28 the model design is **frozen at git tag `frozen-2026-r15`**.
+From 2026-09-28 the model design is **frozen at git tag `frozen-2026-r15b`**. (An earlier tag,
+`frozen-2026-r15`, was lifted before any holdout race to add track-dependent recovery; no holdout
+result had been seen.)
 
 | | Races | Role |
 |---|---|---|

@@ -30,7 +30,8 @@ Four predictors, and **Auto** (the default) picks between them:
 
 - **Baseline** - finish in qualifying order (before Qualifying: practice pace, or the sprint grid).
 - **Grid + recovery** - the baseline, but a fast car starting out of position is expected to move
-  forward (Baku 2026: Antonelli qualified P16 after a crash → predicted P9).
+  forward - more on circuits where overtaking is easy, less at Monaco (Baku 2026: Antonelli
+  qualified P16 after a crash → predicted P9, finished P5).
 - **Ridge, all seasons / same season** - regression on relative inputs (pace ranks and gaps, long
   runs, sprint results, form, teammate gap, tyre use), trained on earlier races only.
 - **Auto** - at each stage, whichever predictor has the best record on this season's earlier races.
@@ -48,12 +49,12 @@ Scored on the first 15 races of 2026 (R1-R15), each predicted using only what wa
 | | Order (Spearman ↑) | Winner log-loss ↓ | Podium Brier ↓ | Whole-grid RPS ↓ |
 |---|---|---|---|---|
 | Baseline | 0.697 | 0.78 | 0.070 | 0.108 |
-| Grid + recovery | **0.709** | **0.75** | 0.071 | **0.107** |
-| **Auto** (default) | 0.703 | 0.76 | **0.068** | **0.107** |
+| Grid + recovery | **0.709** | 0.75 | 0.070 | **0.107** |
+| **Auto** (default) | 0.704 | **0.745** | 0.069 | 0.108 |
 | Ridge, all seasons | 0.699 | 1.18 | 0.075 | 0.110 |
 | Ridge, same season | 0.692 | 1.34 | **0.068** | 0.110 |
 
-The model is **frozen** at tag `frozen-2026-r15`; races from R16 on are an untouched holdout
+The model is **frozen** at tag `frozen-2026-r15b`; races from R16 on are an untouched holdout
 (results in [docs/evaluation.md](docs/evaluation.md#6-frozen-model-and-holdout)).
 2026 has been unusually qualifying-dominated, so beating the grid order is hard; over 2023-26 the
 models' edges are larger and significant (e.g. Grid + recovery +0.018 after Qualifying). What each
@@ -105,6 +106,7 @@ f1cc/predict/              feature matrix, baseline, recovery, ridge, simulation
 f1cc/backtest_summary.py   summaries, significance, Auto
 scripts/backfill.py        pull sessions from FastF1 into data/
 scripts/backtest.py        backtest + stored predictions
+scripts/build_overtakes.py on-track overtakes per race (circuit overtaking ease)
 scripts/experiments/       reusable experiments (season trend, feature retest, chained model)
 tests/                     leakage, data integrity, freshness, app smoke tests
 ```

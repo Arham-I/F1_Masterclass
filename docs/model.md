@@ -28,10 +28,10 @@ What was tried along the way: [experiments.md](experiments.md). Concepts: [faq.m
       order = qualifying,    = the baseline's order,       (all seasons / same season)
       else sprint-quali      then a car starting behind    linear model on the features,
       order, else practice   its pace slot moves up        trained on earlier weekends at
-      pace                   gamma x gap (pace slot =      the same stage; after Qualifying
-                             practice + teammate quali     adds tm_delta (all seasons) or
-                             + team race pace; gamma       new_soft + weighted pace (same
-                             learned from earlier races)   season)
+      pace                   gamma x ease x gap (pace      the same stage; after Qualifying
+                             slot = practice + teammate    adds tm_delta (all seasons) or
+                             quali + team race pace; ease  new_soft + weighted pace (same
+                             = circuit's overtaking rate)  season)
             └──────────────────────┴───────────┬─────────────────┘
                                                ▼
                  place = rank of score  ──►  expected_pos (the predicted order)
@@ -73,6 +73,7 @@ statuses and tyre data, and check that no prediction changes.
 | `new_soft` | New soft sets already used, relative to the field | Same-season ridge after Q |
 | `team_form`, `driver_form` | Average finishing position this season, shrunk toward P10.5 | Ridge |
 | `team_race_pace` | Team's median race long-run pace in this season's earlier races | Recovery (car pace) |
+| track ease | Circuit's on-track passes per green lap vs the preceding 20 races, averaged over earlier visits, shrunk toward 1 (`FeatureBuilder.track_ease`, from `data/overtakes_*.parquet`) | Recovery strength |
 
 Missing values: a missing rank means "behind everyone measured"; a missing relative input means
 "average". Long-run pace is compound-neutral: each lap is compared with the field's median on the
@@ -85,9 +86,11 @@ same tyre. The starting grid after penalties is **shown** but is not an input (s
   weekends). After Qualifying: the qualifying order. No fitted order; only its uncertainty is fitted.
 - **Grid + recovery** (`recovery.py`) - the baseline plus one correction. A car's *pace slot* is
   the field rank of the mean of practice pace, the teammate's qualifying position and the team's
-  race pace. A driver qualifying behind his pace slot moves up `gamma × (grid slot − pace slot)`,
-  never down. `gamma` is re-learned before each race from all earlier races (0.5 since 2023).
-  Identical to the baseline before Qualifying.
+  race pace. A driver qualifying behind his pace slot moves up
+  `gamma × ease × (grid slot − pace slot)`, never down. `ease` is the circuit's on-track
+  overtaking rate relative to average, from earlier races there (Monaco ~0.4, Spa ~1.1, Las Vegas
+  ~1.5; new circuits 1). `gamma` is re-learned before each race from all earlier races (0.5 since
+  2023). Identical to the baseline before Qualifying.
 - **Ridge, all seasons** (`model.py`) - a penalised linear regression (`alpha = 10`) from the inputs
   to finishing position, one model per stage, retrained on every earlier weekend (2022 onward).
 - **Ridge, same season** - the same, trained only on the current season's earlier races; falls
@@ -126,6 +129,9 @@ same tyre. The starting grid after penalties is **shown** but is not an input (s
   drivers since - not merely for missing a session (crash repairs, a wet FP2).
 - **Circuit names** change in the feed (Monaco → "Monte Carlo" 2026, Miami → "Miami Gardens"
   2025+); anything keyed on circuit needs an alias table.
+- **On-track overtakes** (`features.race_overtakes`): order swaps between consecutive green-flag
+  laps where neither car pitted (lap 1-2 excluded). Stored per race by `backfill.py`;
+  `scripts/build_overtakes.py` rebuilds them from the cache.
 - **Starting grid** for a live weekend comes from `data/starting_grid.csv` (hand-entered from two
   published sources; FastF1 only has the grid with the race result).
 
@@ -135,6 +141,7 @@ same tyre. The starting grid after penalties is **shown** but is not an input (s
 |---|---|---|---|
 | `TIME_WEIGHT` | 0.5 | `baseline.py` | Best on 2022-25; 2026 an unseen test |
 | `gamma` (recovery) | learned per race, 0.5 now | `recovery.py` | Best on all earlier races |
+| `EASE_WINDOW`, `EASE_SHRINK` | 20 races, 2 visits | `base.py` | Fixed |
 | `ALPHA` (ridge) | 10 | `model.py` | Fixed up front; 0.01-1000 barely differ |
 | `ERROR_WINDOW` | 40 weekends | `base.py` | Fixed |
 | `DNF_SHRINK` | 20 starts | `base.py` | Fixed |

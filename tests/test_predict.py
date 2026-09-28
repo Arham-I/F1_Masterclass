@@ -131,6 +131,17 @@ def test_recovery_only_moves_drivers_forward_and_only_after_qualifying(features)
         assert recovery_shift(m, 0.5)[list(m["driver"]).index("ANT")] > 3
 
 
+def test_track_ease_uses_earlier_races_only_and_ranks_monaco_hardest(features):
+    b = FeatureBuilder(features)
+    if not len(b._overtakes):
+        pytest.skip("no overtakes table")
+    monaco = b.track_ease(YEAR, 6)                       # 2026 R6 = Monaco
+    assert monaco < 0.6 and b.track_ease(YEAR, 14) == 1.0   # Madrid: new circuit, no history = average
+    later = (b._overtakes["year"] > YEAR) | ((b._overtakes["year"] == YEAR) & (b._overtakes["round"] >= 6))
+    b._overtakes.loc[later, "rel"] = 99.0                # scrambling this and later races changes nothing
+    assert b.track_ease(YEAR, 6) == monaco
+
+
 def test_recovery_strength_is_learned_from_earlier_races_only(features):
     later = (features["year"] == YEAR) & (features["round"] >= ROUND)
     g = lambda f: RecoveryPredictor(f, FeatureBuilder(f)).gamma(YEAR, ROUND)

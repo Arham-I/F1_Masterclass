@@ -277,3 +277,36 @@ def extract(session, year: int, round_number: int, session_idx: int):
         for i, k in enumerate(["year", "round", "session", "session_idx"]):
             tbl.insert(i, k, meta[k])
     return features, lap_tbl.reset_index(drop=True), stints.reset_index(drop=True)
+
+
+# --- on-track overtakes ------------------------------------------------------------------
+PASS_STATUSES_GREEN = ("1",)       # track-status codes that count as racing (2 yellow, 4 SC, 5 red, 6/7 VSC)
+
+
+def race_overtakes(session, year: int, round_number: int) -> pd.DataFrame:
+    """On-track overtakes in a race: pairs of cars whose order swapped between two consecutive
+    green-flag laps, where neither car pitted on either lap (nor pits on the next, when it slows to
+    come in). Lap 1 and the first lap after it are skipped (the start). One row per race; the
+    per-green-lap rate is what describes how hard the circuit is to pass on."""
+    laps = session.laps[["Driver", "LapNumber", "Position", "PitInTime", "PitOutTime", "TrackStatus"]]
+    laps = laps.dropna(subset=["Position"])
+    pos = laps.pivot_table(index="LapNumber", columns="Driver", values="Position")
+    pitted = (laps.assign(p=laps["PitInTime"].notna() | laps["PitOutTime"].notna())
+              .pivot_table(index="LapNumber", columns="Driver", values="p", aggfunc="max")
+              .reindex(index=pos.index, columns=pos.columns).fillna(False).astype(bool))   # no lap row: not pitting
+    status = laps.groupby("LapNumber")["TrackStatus"].agg(lambda s: "".join(str(x) for x in s if pd.notna(x)))
+    green = status.map(lambda s: set(s) <= set("1") or s == "")
+    passes, green_laps = 0, 0
+    for lap in pos.index:
+        if lap < 3 or (lap - 1) not in pos.index or not green.get(lap, False) or not green.get(lap - 1, False):
+            continue
+        ok = pos.loc[lap - 1].notna() & pos.loc[lap].notna() & ~pitted.loc[lap] & ~pitted.loc[lap - 1]
+        if (lap + 1) in pitted.index:
+            ok &= ~pitted.loc[lap + 1]
+        before, after = pos.loc[lap - 1][ok].to_numpy(), pos.loc[lap][ok].to_numpy()
+        if len(before) >= 2:
+            passes += int(((before[:, None] > before[None, :]) & (after[:, None] < after[None, :])).sum())
+            green_laps += 1
+    return pd.DataFrame([{"year": year, "round": round_number, "location": str(session.event["Location"]),
+                          "overtakes": passes, "green_laps": green_laps,
+                          "per_green_lap": passes / green_laps if green_laps else np.nan}])

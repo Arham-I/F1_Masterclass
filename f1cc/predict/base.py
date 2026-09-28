@@ -96,6 +96,15 @@ def _is_before(df: pd.DataFrame, year: int, round_number: int) -> pd.Series:
     return (df["year"] < year) | ((df["year"] == year) & (df["round"] < round_number))
 
 
+CIRCUIT_ALIAS = {"Monte Carlo": "Monaco", "Miami Gardens": "Miami"}   # same circuit, renamed in the feed
+EASE_WINDOW = 20           # races an overtaking rate is compared with (the race itself and those before it)
+EASE_SHRINK = 2.0          # pseudo-visits of "average" (1.0) mixed into a circuit's overtaking ease
+
+
+def circuit(location: str) -> str:
+    return CIRCUIT_ALIAS.get(location, location)
+
+
 class FeatureBuilder:
     """Turns the features table into one row per driver for (year, round, k sessions revealed)."""
 
@@ -107,6 +116,13 @@ class FeatureBuilder:
         race_laps = features[(features["session"] == "Race")].dropna(subset=["longrun_delta_s"])
         self._race_pace = (race_laps.groupby(["year", "round", "team"])["longrun_delta_s"].median()
                            .rename("pace").reset_index())
+        from .. import store                           # on-track overtakes per race (optional)
+        ot = store.read("overtakes").sort_values(["year", "round"]).reset_index(drop=True)
+        if len(ot):
+            trailing = ot["per_green_lap"].rolling(EASE_WINDOW, min_periods=5).mean()
+            ot["rel"] = ot["per_green_lap"] / trailing           # vs races already run: era-neutral
+            ot["circuit"] = ot["location"].map(circuit)
+        self._overtakes = ot
         self._weekends: dict[tuple[int, int], Weekend] = {}
         self._cache: dict[tuple[int, int, int], pd.DataFrame] = {}
 
@@ -115,6 +131,17 @@ class FeatureBuilder:
         if key not in self._weekends:
             self._weekends[key] = Weekend.from_features(self.features, year, round_number)
         return self._weekends[key]
+
+    def track_ease(self, year: int, round_number: int) -> float:
+        """How easy this circuit is to overtake on, from EARLIER races there (1 = average; Monaco
+        ~0.4): on-track passes per green lap vs the races before, shrunk toward 1."""
+        ot = self._overtakes
+        if not len(ot):
+            return 1.0
+        c = circuit(self.weekend(year, round_number).location)
+        past = ot[((ot["year"] < year) | ((ot["year"] == year) & (ot["round"] < round_number)))
+                  & (ot["circuit"] == c)]["rel"].dropna()
+        return float((past.sum() + EASE_SHRINK) / (len(past) + EASE_SHRINK))
 
     def weekends_before(self, year: int, round_number: int) -> list[tuple[int, int]]:
         keys = self._races[["year", "round"]].drop_duplicates()

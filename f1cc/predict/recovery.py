@@ -3,8 +3,9 @@ to move forward.
 
 A car's pace slot is the field rank of the mean of three estimates of where it belongs: practice
 pace rank, the teammate's qualifying position, and the team's race pace in this season's earlier
-races. A driver starting behind that slot is moved up by gamma x the gap (never down). gamma is
-chosen before every race on *all* earlier races (0.5 from 2023 on).
+races. A driver starting behind that slot is moved up by gamma x ease x the gap (never down), where
+ease is the circuit's on-track overtaking rate relative to average from earlier races (Monaco ~0.4,
+Las Vegas ~1.5; FeatureBuilder.track_ease). gamma is chosen before every race on *all* earlier races.
 
 Evidence (docs/experiments.md): over 2023-26 +0.017 Spearman after Qualifying
 (interval above zero); in 2026 neutral so far (-0.002), where qualifying has been unusually
@@ -61,8 +62,9 @@ class RecoveryPredictor(BaselinePredictor):
                 ok = act.notna().to_numpy()
                 if ok.sum() >= 10:
                     q = fill_for_model(m)["q_pos"].to_numpy(dtype=float)
+                    ease = self.builder.track_ease(y, r)
                     for g in GAMMAS:
-                        adj = pd.Series(q - recovery_shift(m, g))[ok]
+                        adj = pd.Series(q - recovery_shift(m, g * ease))[ok]
                         out[g] = adj.rank(method="first").corr(act[ok].rank())
             self._rho[(y, r)] = out
         return self._rho[(y, r)]
@@ -78,10 +80,14 @@ class RecoveryPredictor(BaselinePredictor):
 
     def _score(self, m: pd.DataFrame, year: int = 0, round_number: int = 0, k: int = 0) -> np.ndarray:
         base = super()._score(m, year, round_number, k)
-        return base - recovery_shift(m, self.gamma(year, round_number))
+        return base - recovery_shift(m, self.strength(year, round_number))
 
     def _center(self, m, place, year, round_number, k) -> np.ndarray:
         # The baseline's time-scale centre, moved forward by the same recovery shift.
         base_place = pd.Series(BaselinePredictor.score(m)).rank(method="first").to_numpy()
         center = super()._center(m, base_place, year, round_number, k)
-        return center - recovery_shift(m, self.gamma(year, round_number))
+        return center - recovery_shift(m, self.strength(year, round_number))
+
+    def strength(self, year: int, round_number: int) -> float:
+        """gamma scaled by how easy this circuit is to pass on (Monaco ~0.4x, Las Vegas ~1.5x)."""
+        return self.gamma(year, round_number) * self.builder.track_ease(year, round_number)

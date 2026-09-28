@@ -41,7 +41,8 @@ practice). Its *percentages* come from a Monte Carlo simulation whose inputs - n
 retirement chances, gap per grid place - are fitted to past data.
 
 **Is Grid + recovery just baseline plus recovery?** Yes. Identical before Qualifying; after it, a
-driver starting behind his car's pace moves up `0.5 × (grid slot − pace slot)`. Baku 2026:
+driver starting behind his car's pace moves up `0.5 × ease × (grid slot − pace slot)`, where ease
+is how easy the circuit is to overtake on (Monaco ~0.4, most tracks ~1). Baku 2026:
 Antonelli qualified P16 after a Q1 crash, pace slot ~P2 → predicted P9.
 
 **How does Auto work, and does it learn from the latest race?** For each stage it averages each
@@ -92,6 +93,11 @@ time; both are correct for their purpose.
 - **Long runs**: clean dry-tyre stints of 5+ laps (after dropping laps more than 4% off the stint
   median), each lap compared with the field's median on the same compound. No fuel correction -
   fuel loads are not in the feed; tyre-age correction was tested and made it worse.
+
+**Can tracks be ranked by overtaking difficulty?** Yes - by counting on-track passes (order swaps
+between green-flag laps, pit stops excluded): Monaco ~3 per race, Las Vegas / Abu Dhabi the most.
+The earlier measure (how closely the finish follows the grid) could not: it mostly reflects how
+spread out the cars are, and was not even stable across 2000-2025.
 
 ## The feedback-loop idea
 

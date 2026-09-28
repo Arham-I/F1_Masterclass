@@ -24,6 +24,7 @@ important ones are in `scripts/experiments/` (see [season-checklist.md](season-c
 | Day 3 | Official Q1-Q3 times for qualifying best laps | Fixes deleted laps (2.5% of results) |
 | Day 3 | Starting grid shown (not an input); live weekends predicted before the race | - |
 | Day 3 | **Grid + recovery** predictor | After Q +0.018 over 2023-26 [+0.007, +0.030], +0.006 in 2026; Auto uses it after Q from R10. Baku (R15): Antonelli P16 → P5, predicted P9 |
+| Day 3 | **Track-dependent recovery**: strength × circuit overtaking ease (on-track passes per green lap from earlier races, 2022-26; Monaco ~0.4) | +0.0016 over 2023-26 (n.s.), positive 2023-25, 2026 −0.0005; Grid + recovery vs baseline +0.018 → +0.021. No new tuned setting. The results-based difficulty measure (grid vs finish) failed, even with 2000-25 history - see below |
 | Day 3 | **Noise shape** for baseline and Grid + recovery: scale learned per race, wider before Q, top six tighter after Q | Order unchanged. Winner log-loss better 2023-26 (−0.04 to −0.06), after Q in 3 of 4 seasons; 2026 after Q −0.19/−0.21 (significant); RPS before Q significantly better; podium Brier after Q +0.001 (n.s.). Pole sitter's average win % 49 → 67 |
 
 ## 2. Rejected

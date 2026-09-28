@@ -48,6 +48,13 @@ def _load_and_extract(year: int, rnd: int, sname: str, idx: int):
             time.sleep(RATE_LIMIT_WAIT_S)
 
 
+def _store_overtakes(year: int, rnd: int) -> None:
+    ovt = features.race_overtakes(data.load_session(year, rnd, "Race"), year, rnd)   # cached: no extra download
+    old = store.read("overtakes", [year])
+    old = old[old["round"] != rnd] if len(old) else old
+    store.write("overtakes", year, pd.concat([old, ovt], ignore_index=True).sort_values("round"))
+
+
 def backfill_year(year: int, rounds: list[int] | None, in_progress: bool = False) -> list[tuple]:
     sched = data.get_schedule(year)
     completed = set(data.completed_rounds(year))
@@ -83,6 +90,8 @@ def backfill_year(year: int, rounds: list[int] | None, in_progress: bool = False
                 new[name].append(df)
             print(f"  ok   {year} R{rnd:02d} {row.EventName:26} {sname:11} ({time.time()-t0:4.1f}s)", flush=True)
 
+        if (rnd, "Race") not in done and any(len(df) and (df["session"] == "Race").any() for df in new["features"]):
+            _store_overtakes(year, rnd)            # on-track overtakes, for Grid + recovery's track ease
         if any(new[t] for t in store.TABLES):
             for t in store.TABLES:
                 existing[t] = pd.concat([existing[t], *new[t]], ignore_index=True)

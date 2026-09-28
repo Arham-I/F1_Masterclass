@@ -156,3 +156,36 @@ def test_gaps_and_rank_use_best_valid_lap():
     f = f.set_index("driver")
     assert f.loc["A", "gap_to_best_s"] == 0 and np.isclose(f.loc["C", "gap_to_best_s"], 0.4)
     assert list(f.sort_values("pace_rank").index) == ["A", "B", "C"]
+
+
+# --- on-track overtakes -------------------------------------------------------------------
+class _RaceSession:
+    def __init__(self, laps):
+        self.laps = laps
+        self.event = pd.Series({"Location": "Testville"})
+
+
+def _race_laps(rows):
+    df = pd.DataFrame(rows, columns=["Driver", "LapNumber", "Position", "PitInTime", "PitOutTime", "TrackStatus"])
+    for c in ("PitInTime", "PitOutTime"):
+        df[c] = pd.to_timedelta(df[c])
+    return df
+
+
+def test_race_overtakes_counts_on_track_swaps_only():
+    from f1cc.features import race_overtakes
+    T = pd.Timedelta("1h")
+    rows = []
+    for lap in range(1, 8):
+        a_pos, b_pos, c_pos = (1, 2, 3)
+        if lap >= 4: a_pos, b_pos = 2, 1                  # lap 4: B passes A on track -> 1 overtake
+        if lap >= 6: b_pos, c_pos = 3, 2                  # lap 6: C "passes" B because B pits -> not counted
+        pit_b = T if lap == 6 else None
+        status = "4" if lap == 5 else "1"                 # lap 5 under safety car
+        rows += [("A", lap, a_pos, None, None, status), ("B", lap, b_pos, pit_b, None, status),
+                 ("C", lap, c_pos, None, None, status)]
+    out = race_overtakes(_RaceSession(_race_laps(rows)), 2099, 1)
+    assert out["overtakes"].iloc[0] == 1
+    # counted laps: 3, 4 and 7 (lap 5 is under the safety car, lap 6 follows it; on lap 7 only A and C
+    # are compared because B pitted on lap 6)
+    assert out["green_laps"].iloc[0] == 3
