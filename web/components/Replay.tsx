@@ -121,7 +121,7 @@ export default function Replay({ weekend, slug }: { weekend: Weekend; slug: stri
             <RaceControl steps={steps.slice(0, i + 1)} />
             <div className="border-t border-line pt-4">
               <h2 className="h3">Who can win
-                <InfoTip label="Who can win">The four drivers most likely to win right now, and how their chances moved after each session. Hover over or tap a session for exact numbers. Underneath: how many places a typical prediction is off by at each point, which shrinks as the weekend reveals more.</InfoTip>
+                <InfoTip label="Who can win">The four drivers most likely to win right now, and how their chances moved after each session. Hover over or tap a session for exact numbers. Underneath: the typical error in places at each point. It comes from how far off this model&apos;s predictions were at the same point of the previous 40 race weekends (cars that finished), so it shrinks as the weekend reveals more.</InfoTip>
               </h2>
               <div className="mt-3">
                 <WeekendTrend steps={steps} upto={i} rowsAt={(k) => rowsFor(steps[k].stage, model).rows} drivers={weekend.drivers} />

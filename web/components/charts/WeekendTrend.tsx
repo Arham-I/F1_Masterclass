@@ -91,7 +91,7 @@ export default function WeekendTrend({ steps, upto, rowsAt, drivers }: {
       )}
       </div>
       <div className="mt-3 border-t border-line pt-3">
-        <p className="text-xs text-ink-3">Typical error of the prediction (places, for cars that finish)</p>
+        <p className="text-xs text-ink-3">Typical error in places, for cars that finish: how far off this model was at the same point of the previous 40 race weekends</p>
         <ol className="mt-2 grid gap-1.5" style={{ gridTemplateColumns: `repeat(${steps.length}, minmax(0, 1fr))` }}>
           {steps.map((s, i) => (
             <li key={s.session} className={`rounded-md px-1 py-1.5 text-center ${i === upto ? "bg-surface-3 ring-1 ring-ink" : "bg-surface-2"}`}>

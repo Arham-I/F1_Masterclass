@@ -17,7 +17,7 @@ const NUMBERS = [
   ["Win / Podium / Points chance", "We simulate the race 20,000 times, adding realistic randomness: driver errors, strategy swings, retirements. The chance is the share of those races in which the driver won, finished top 3, or finished top 10 (the points places)."],
   ["Retirement chance", "Chance of not reaching the finish, based on how often this team's cars have retired, blended with the long-term average."],
   ["Likely finish range", "The race is simulated 20,000 times. The range covers the positions the driver finished in 8 out of 10 of those races: 1 in 10 went better, 1 in 10 worse. A narrow range means a confident prediction."],
-  ["± places (typical error)", "How far off a prediction like this usually is for cars that finish. It shrinks as the weekend goes on; before qualifying the model has to guess the grid too."],
+  ["± places (typical error)", "How far off this model's predictions were, for cars that finished, at the same point of the previous 40 race weekends (across seasons, not only this one). It is smaller for the front-runners and larger down the order, and it shrinks as the weekend goes on; before qualifying the model has to guess the grid too. The simulated races use this error to set how much the order can shuffle."],
   ["Order score", "How closely a predicted order matches the real one, from 0 (no better than random) to 1 (perfect). Also known as Spearman rank correlation."],
 ];
 
