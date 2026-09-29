@@ -8,9 +8,15 @@ the result either.
 """
 from __future__ import annotations
 
+import numpy as np
 import pandas as pd
 
 from f1cc.predict.base import finished
+
+# The simulation's per-driver sigma is a normal spread; the average miss it implies is
+# sigma / sqrt(pi/2) (about sigma / 1.25). Commentary quotes the average miss, which is what
+# "typical miss" means to a reader and matches how the backtest measures misses.
+SPREAD_TO_MISS = float(np.sqrt(np.pi / 2))
 
 SHORT = {"Practice 1": "FP1", "Practice 2": "FP2", "Practice 3": "FP3", "Sprint Qualifying": "Sprint Qualifying",
          "Sprint": "the Sprint", "Qualifying": "Qualifying"}
@@ -92,10 +98,11 @@ def prediction_notes(now: pd.DataFrame, prev: pd.DataFrame | None, names: dict[s
             verb = "climbs" if m["change"] > 0 else "drops"
             notes.append(f"Biggest mover: {_name(names, m['driver'])} {verb} from a predicted "
                          f"P{int(m['expected_pos_prev'])} to P{int(m['expected_pos'])}.")
-        was, now_s = float(prev["sigma"].mean()), float(now["sigma"].mean())
+        was = float(prev["sigma"].mean()) / SPREAD_TO_MISS
+        now_s = float(now["sigma"].mean()) / SPREAD_TO_MISS
         if now_s < was - 0.05:
-            notes.append(f"The picture is sharper: a typical finisher is now expected within ±{now_s:.1f} places "
-                         f"of our prediction (±{was:.1f} before).")
+            notes.append(f"The picture is sharper: a typical finisher is now expected to end up about {now_s:.1f} "
+                         f"places from our prediction ({was:.1f} before).")
     return notes
 
 

@@ -9,6 +9,10 @@ export const lapTime = (s: number | null | undefined) => {
 
 export const gap = (s: number | null | undefined) => (s == null ? "–" : s === 0 ? "Fastest" : `+${s.toFixed(3)}s`);
 
+// The simulation's sigma is a normal spread; the average miss it implies is sigma / sqrt(pi/2)
+// (about sigma / 1.25). That average miss is what the site calls the "typical miss".
+export const typicalMiss = (sigma: number) => sigma / Math.sqrt(Math.PI / 2);
+
 export const slug = (year: number, round: number) => `${year}-${String(round).padStart(2, "0")}`;
 
 export const ordinal = (n: number) => `P${n}`;

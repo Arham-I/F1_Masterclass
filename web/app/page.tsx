@@ -37,7 +37,7 @@ export default function Home() {
       <p className="max-w-3xl text-[16px] leading-relaxed text-ink-2">
         So far this season, predicting after qualifying, our pick has won <b className="text-ink">{wins} of {afterQ.races}</b> races
         and we&apos;ve named <b className="text-ink">{afterQ.podium_hits.toFixed(1)} of the 3</b> podium finishers on average.
-        A typical driver finishes <b className="text-ink">{afterQ.mae.toFixed(1)} places</b> from our prediction; simply
+        Counting retirements, a typical driver finishes <b className="text-ink">{afterQ.mae.toFixed(1)} places</b> from our prediction; simply
         assuming the qualifying order gives {base.mae.toFixed(1)}. <Link href="/accuracy/" className="font-semibold text-ink underline decoration-line underline-offset-4 hover:decoration-ink">See the full record</Link>
       </p>
 

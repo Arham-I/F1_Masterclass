@@ -132,7 +132,7 @@ export default function RaceReveal({ weekend, slug, rowsFor }: {
               <th scope="col" className="py-2 pr-3 font-normal">Model</th>
               <th scope="col" className="py-2 pr-3 font-normal">Winner picked<InfoTip label="Winner picked">Whether the driver this model predicted to finish first actually won, and the win chance it had given the real winner.</InfoTip></th>
               <th scope="col" className="py-2 pr-3 text-right font-normal">Podium named<InfoTip label="Podium named" align="right">How many of the real top three were in this model&apos;s predicted top three.</InfoTip></th>
-              <th scope="col" className="py-2 pr-3 text-right font-normal">Typical miss<InfoTip label="Typical miss" align="right">The average number of places between each driver&apos;s predicted and actual finishing position. Lower is better.</InfoTip></th>
+              <th scope="col" className="py-2 pr-3 text-right font-normal">Typical miss<InfoTip label="Typical miss" align="right">The average number of places between each driver&apos;s predicted and actual finishing position, counting retired cars in the position they were classified. Lower is better.</InfoTip></th>
               <th scope="col" className="py-2 text-right font-normal">Order score<InfoTip label="Order score" align="right">How closely the whole predicted order matched the real finishing order: 1 is perfect, 0 is no better than a random order.</InfoTip></th>
             </tr>
           </thead>

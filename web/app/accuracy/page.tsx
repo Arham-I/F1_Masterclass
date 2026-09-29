@@ -47,7 +47,7 @@ export default function AccuracyPage() {
               {[
                 { k: "Winner picked", a: `${Math.round(auto.winner_hit * auto.races)} of ${auto.races}`, b: `${Math.round(base.winner_hit * base.races)} of ${base.races}`, tip: "How often our predicted winner actually won." },
                 { k: "Podium finishers named", a: `${auto.podium_hits.toFixed(2)} of 3`, b: `${base.podium_hits.toFixed(2)} of 3`, tip: "On average, how many of the real top three were in our predicted top three." },
-                { k: "Typical miss", a: `${auto.mae.toFixed(2)} places`, b: `${base.mae.toFixed(2)} places`, tip: "Average gap between each driver's predicted and actual finishing place. Lower is better." },
+                { k: "Typical miss, all cars", a: `${auto.mae.toFixed(2)} places`, b: `${base.mae.toFixed(2)} places`, tip: "Average gap between each driver's predicted and actual finishing place, counting retired cars in the position they were classified. Retirements make this larger than the typical miss shown during a replay, which covers cars that finish. Lower is better." },
                 { k: "Order score", a: auto.spearman.toFixed(3), b: base.spearman.toFixed(3), tip: "How closely the whole predicted order matched the real one (Spearman rank correlation). 1 is perfect, 0 is no better than random." },
               ].map((c) => (
                 <tr key={c.k} className="border-b border-line">
@@ -109,7 +109,7 @@ export default function AccuracyPage() {
                 <th scope="col" className="px-3 py-2 font-normal">Round</th>
                 <th scope="col" className="px-3 py-2 font-normal">Winner picked</th>
                 <th scope="col" className="px-3 py-2 text-right font-normal">Podium</th>
-                <th scope="col" className="px-3 py-2 text-right font-normal">Typical miss</th>
+                <th scope="col" className="px-3 py-2 text-right font-normal">Typical miss, all cars</th>
                 <th scope="col" className="px-3 py-2 text-right font-normal">Order score</th>
               </tr>
             </thead>
@@ -147,7 +147,7 @@ export default function AccuracyPage() {
                   <th scope="col" className="px-3 py-2 font-normal">Model</th>
                   <th scope="col" className="px-3 py-2 text-right font-normal">Winners</th>
                   <th scope="col" className="px-3 py-2 text-right font-normal">Podium</th>
-                  <th scope="col" className="px-3 py-2 text-right font-normal">Miss</th>
+                  <th scope="col" className="px-3 py-2 text-right font-normal">Miss, all cars</th>
                   <th scope="col" className="px-3 py-2 text-right font-normal">Order</th>
                 </tr>
               </thead>

@@ -8,7 +8,7 @@ export type SessionTime = { name: string; start_utc: string | null };
 export type PredRow = {
   driver: string;
   pos: number;          // predicted finishing position
-  sigma: number;        // typical error in places
+  sigma: number;        // spread of the simulated shuffle, in places (typical miss = sigma / 1.25)
   p_win: number;
   p_podium: number;
   p_points: number;

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { pct } from "@/lib/format";
+import { pct, typicalMiss } from "@/lib/format";
 import type { Drivers, PredRow, Step } from "@/lib/types";
 
 const W = 520, H = 220, L = 38, R = 70, T = 14, B = 34;
@@ -20,7 +20,7 @@ export default function WeekendTrend({ steps, upto, rowsAt, drivers }: {
   const x = (i: number) => L + (steps.length === 1 ? 0.5 : i / (steps.length - 1)) * (W - L - R);
   const y = (p: number) => T + (1 - p / ymax) * (H - T - B);
   const ticks = [0, ymax / 2, ymax].map((v) => Math.round(v * 20) / 20);
-  const sigma = shown.map((rows) => rows.reduce((t, r) => t + r.sigma, 0) / rows.length);
+  const miss = shown.map((rows) => typicalMiss(rows.reduce((t, r) => t + r.sigma, 0) / rows.length));
 
   // Nudge end labels apart so they never overlap.
   const labels = series.map((s) => ({ d: s.d, y: y(s.pts[upto]) })).sort((a, b) => a.y - b.y);
@@ -86,17 +86,17 @@ export default function WeekendTrend({ steps, upto, rowsAt, drivers }: {
               <span className="text-ink-2">{q.d}</span>
             </p>
           ))}
-          <p className="mt-1.5 text-ink-2">Typical error <b className="num text-ink">±{sigma[hover].toFixed(1)}</b> places</p>
+          <p className="mt-1.5 text-ink-2">Typical miss <b className="num text-ink">{miss[hover].toFixed(1)}</b> places</p>
         </div>
       )}
       </div>
       <div className="mt-3 border-t border-line pt-3">
-        <p className="text-xs text-ink-3">Typical error in places, for cars that finish: how far off this model was at the same point of the previous 40 race weekends</p>
+        <p className="text-xs text-ink-3">Typical miss in places for cars that finish: this model&apos;s average miss at the same point of the previous 40 race weekends</p>
         <ol className="mt-2 grid gap-1.5" style={{ gridTemplateColumns: `repeat(${steps.length}, minmax(0, 1fr))` }}>
           {steps.map((s, i) => (
             <li key={s.session} className={`rounded-md px-1 py-1.5 text-center ${i === upto ? "bg-surface-3 ring-1 ring-ink" : "bg-surface-2"}`}>
               <span className="block text-[11px] text-ink-2">{s.short}</span>
-              <span className={`num block text-sm font-semibold ${i <= upto ? "" : "text-ink-3"}`}>{i <= upto ? `±${sigma[i].toFixed(1)}` : "?"}</span>
+              <span className={`num block text-sm font-semibold ${i <= upto ? "" : "text-ink-3"}`}>{i <= upto ? miss[i].toFixed(1) : "?"}</span>
             </li>
           ))}
         </ol>
