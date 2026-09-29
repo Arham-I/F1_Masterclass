@@ -9,6 +9,7 @@
     <array>
         <string>/Users/macbookair/Desktop/GitRepos/F1_Masterclass/.venv/bin/python</string>
         <string>scripts/auto_update.py</string>
+        <string>--push</string>
     </array>
 
     <key>WorkingDirectory</key>
