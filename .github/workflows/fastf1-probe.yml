@@ -1,8 +1,9 @@
 # Does FastF1 work from GitHub's runners at all?
 #
 # The F1 timing endpoint is not a supported public API, and CI address ranges are sometimes
-# rate-limited or blocked. Run this once by hand before trusting the scheduled updater; it fetches
-# a schedule and one finished session and reports what happened. It writes nothing.
+# rate-limited or blocked. Run this once by hand before trusting a scheduled updater; it reports
+# the HTTP status of each upstream FastF1 depends on, then tries a real session load. It writes
+# nothing.
 name: FastF1 probe
 
 on:
@@ -22,31 +23,35 @@ jobs:
 
       - run: pip install -r requirements-dev.txt
 
-      - name: Fetch a schedule and one session
+      - name: Upstream reachability
+        continue-on-error: true
+        run: |
+          for url in \
+            "https://livetiming.formula1.com/static/2026/2026-09-26_Azerbaijan_Grand_Prix/2026-09-25_Qualifying/SessionInfo.json" \
+            "https://api.jolpi.ca/ergast/f1/2026/15/results.json" \
+            "https://www.formula1.com/" ; do
+            code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 30 "$url" || echo "curl-failed")
+            echo "HTTP $code  $url"
+          done
+
+      - name: Load a finished session with FastF1 logging on
         run: |
           python - <<'PY'
-          import time, traceback, warnings
+          import logging, sys, traceback, warnings
           warnings.filterwarnings("ignore")
+          logging.basicConfig(level=logging.DEBUG, stream=sys.stdout,
+                              format="%(levelname)s %(name)s: %(message)s")
           from f1cc import data
+          data._enable_cache()
+          logging.getLogger("fastf1").setLevel(logging.DEBUG)   # _enable_cache quietens it
 
-          ok = True
-
-          def step(label, fn):
-              global ok
-              t0 = time.time()
-              try:
-                  out = fn()
-                  print(f"PASS  {label}  ({time.time() - t0:.1f}s)  {out}")
-              except Exception as e:
-                  ok = False
-                  print(f"FAIL  {label}  ({time.time() - t0:.1f}s)  {type(e).__name__}: {e}")
-                  traceback.print_exc()
-
-          step("schedule 2026", lambda: f"{len(data.get_schedule(2026))} rounds")
-          step("session 2026 R15 Qualifying",
-               lambda: f"{len(data.load_session(2026, 15, 'Qualifying').laps)} laps")
-
-          print("\nFastF1 works from GitHub Actions." if ok else
-                "\nFastF1 does NOT work from GitHub Actions; keep the updates on a local timer.")
-          raise SystemExit(0 if ok else 1)
+          print(f"schedule: {len(data.get_schedule(2026))} rounds")
+          try:
+              s = data.load_session(2026, 15, "Qualifying")
+              print(f"\nPASS  {len(s.laps)} laps, {len(s.results)} classified")
+              print("\nFastF1 works from GitHub Actions.")
+          except Exception:
+              traceback.print_exc()
+              print("\nFastF1 does NOT work from GitHub Actions; keep the updates on a local timer.")
+              raise SystemExit(1)
           PY
