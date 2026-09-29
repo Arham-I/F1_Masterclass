@@ -182,7 +182,7 @@ export default function Replay({ weekend, slug }: { weekend: Weekend; slug: stri
           </section>
 
           {i === last && !weekend.live && (
-            <div className="flex flex-wrap items-center gap-4 border-y border-line py-5">
+            <div className="checker-edge flex flex-wrap items-center gap-4 border-y border-line py-5 pr-1">
               <div className="mr-auto">
                 <p className="h3">Every session before the race is in.</p>
                 <p className="text-sm text-ink-2">See how the prediction held up against the real result.</p>

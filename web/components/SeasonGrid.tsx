@@ -70,9 +70,10 @@ export default function SeasonGrid({ rounds, drivers, year }: { rounds: RoundSum
           return (
             <li key={r.round} className="border-b border-line">
               {playable ? (
-                <Link href={`/weekend/${slug(year, r.round)}/`} className="group flex items-center gap-3 px-1 py-3 hover:bg-surface">{row}</Link>
+                <Link href={`/weekend/${slug(year, r.round)}/`}
+                  className={`group flex items-center gap-3 py-3 pl-5 pr-1 hover:bg-surface ${r.status === "finished" ? "checker-notch" : ""}`}>{row}</Link>
               ) : (
-                <div className="flex items-center gap-3 px-1 py-3 text-ink-3">{row}</div>
+                <div className="flex items-center gap-3 py-3 pl-5 pr-1 text-ink-3">{row}</div>
               )}
             </li>
           );
