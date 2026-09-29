@@ -30,16 +30,27 @@ RATE_LIMIT_WAIT_S = 300   # FastF1 allows ~500 API calls/hour; cached responses 
 RATE_LIMIT_MAX_WAITS = 30  # give up on a session after ~2.5h of waiting
 
 
-def _load_and_extract(year: int, rnd: int, sname: str, idx: int):
+class SessionStillRunning(RuntimeError):
+    """Pulled before the timing feed called the session over; try again later."""
+
+
+def _load_and_extract(year: int, rnd: int, sname: str, idx: int, require_complete: bool = False):
     """Load + extract one session, waiting out FastF1's hourly rate limit instead of failing.
 
     Failing fast here is the trap: after the limit trips, every remaining session errors in
     milliseconds and the whole backfill "finishes" having fetched nothing.
+
+    ``require_complete`` refuses a session the feed has not called over yet, so an unattended run
+    cannot store a red-flagged session that is still going. Once stored it would never be re-fetched.
     """
     for attempt in range(RATE_LIMIT_MAX_WAITS + 1):
         try:
             session = data.load_session(year, rnd, sname)
+            if require_complete and not data.session_complete(session):
+                raise SessionStillRunning(f"{year} R{rnd:02d} {sname} has not finished yet")
             return features.extract(session, year, rnd, idx)
+        except SessionStillRunning:
+            raise
         except Exception as e:
             if type(e).__name__ != "RateLimitExceededError" or attempt == RATE_LIMIT_MAX_WAITS:
                 raise
@@ -75,13 +86,18 @@ def backfill_year(year: int, rounds: list[int] | None, in_progress: bool = False
     for rnd in sorted(wanted):
         row = sched[sched.RoundNumber == rnd].iloc[0]
         new = {t: [] for t in store.TABLES}
+        live = rnd not in completed        # race still to come: sessions may be running right now
         ready = data.weekend_sessions(row) if rnd in completed else data.finished_sessions(row)
         for idx, sname in enumerate(data.weekend_sessions(row)):
             if (rnd, sname) in done or sname not in ready:
                 continue
             t0 = time.time()
             try:
-                f, l, s = _load_and_extract(year, rnd, sname, idx)
+                f, l, s = _load_and_extract(year, rnd, sname, idx, require_complete=live)
+            except SessionStillRunning as e:
+                # Not a failure: the next run picks it up. Don't store a partial session.
+                print(f"  wait {year} R{rnd:02d} {sname}: {e}", flush=True)
+                continue
             except Exception as e:  # keep going: one bad session must not sink the backfill
                 failures.append((year, rnd, sname, type(e).__name__, str(e)[:120]))
                 print(f"  FAIL {year} R{rnd:02d} {sname}: {type(e).__name__}: {str(e)[:100]}", flush=True)

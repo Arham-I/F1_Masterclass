@@ -63,6 +63,9 @@ Traps:
   This is also why the race waits 60 minutes rather than 30: a stewards' penalty applied after the
   flag changes the classification, and a race stored before it lands keeps the provisional order.
   If a penalty is announced later, delete that round and re-pull.
+  A session that over-runs its slot (red flags, a postponement) is handled automatically: for a
+  weekend whose race has not run, the backfill refuses to store a session the timing feed has not
+  called over (`Finalised`/`Ends`), printing `wait ...` and leaving it for the next run.
 - **Rate limit.** FastF1 allows ~500 API calls/hour. A weekend is well under that; a multi-season
   rebuild is not (the backfill waits it out).
 - **Offline rebuilds** (after changing `f1cc/features.py`): delete `data/{features,laps,stints}_*.parquet`

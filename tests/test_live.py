@@ -71,3 +71,33 @@ def test_starting_grid_prefers_the_stored_race():
     g = store.starting_grid(f, 2026, 14)                    # a finished weekend: from the Race rows
     race = f[(f["round"] == 14) & (f["session"] == "Race")]
     assert len(g) == len(race) and g["penalty"].isna().all()
+
+
+# --- an unattended pull must never freeze a session that is still running ---------------------
+
+class _FakeSession:
+    def __init__(self, statuses):
+        self.session_status = pd.DataFrame({"Status": statuses}) if statuses is not None else None
+
+
+def test_session_complete_needs_a_terminal_status():
+    from f1cc.data import session_complete
+    # Qualifying reports "Finished" after each of Q1/Q2/Q3, so it alone means nothing.
+    assert not session_complete(_FakeSession(["Inactive", "Started", "Finished"]))
+    assert not session_complete(_FakeSession(["Started"]))
+    assert session_complete(_FakeSession(["Started", "Finished", "Finalised", "Ends"]))
+    assert session_complete(_FakeSession(["Started", "Finalised"]))
+
+
+def test_session_complete_defaults_to_true_without_a_status_feed():
+    """Older seasons have no status stream; they must stay pullable."""
+    from f1cc.data import session_complete
+
+    class NoFeed:
+        @property
+        def session_status(self):
+            raise AttributeError("no status")
+
+    assert session_complete(NoFeed())
+    assert session_complete(_FakeSession(None))
+    assert session_complete(_FakeSession([]))

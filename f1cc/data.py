@@ -121,6 +121,27 @@ def check_event_match(schedule_row: pd.Series, loaded_event: pd.Series) -> None:
         )
 
 
+TERMINAL_STATUS = ("Finalised", "Ends")
+
+
+def session_complete(session) -> bool:
+    """Whether the timing feed says this session is over.
+
+    Matters for an unattended pull: the schedule only gives a session's *scheduled* end, so a
+    red-flagged or postponed session can still be running when we come to fetch it. Storing it
+    then would freeze a partial session, because the backfill never re-fetches one it already has.
+
+    ``Finished`` is not enough - qualifying reports it after each of Q1, Q2 and Q3.
+    """
+    try:
+        status = session.session_status
+    except Exception:       # older seasons / a feed without the status stream
+        return True
+    if status is None or len(status) == 0:
+        return True
+    return bool(status["Status"].isin(TERMINAL_STATUS).any())
+
+
 def load_session(year: int, round_number: int, session_name: str):
     """Load one session (laps + weather, no telemetry), verified to be the requested event."""
     _enable_cache()
