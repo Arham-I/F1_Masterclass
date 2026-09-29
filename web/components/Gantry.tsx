@@ -26,7 +26,7 @@ export default function Gantry({ steps, i, race, live, playing, autoplayMs, onGo
     );
   };
   return (
-    <ol className="flex min-w-0 flex-1 gap-1 rounded-md bg-[#101113] p-1.5" aria-label="Weekend sessions">
+    <ol className="cut flex min-w-0 flex-1 gap-1 bg-[var(--housing)] p-1.5" aria-label="Weekend sessions">
       {steps.map((s, k) => {
         const current = k === i && !race;
         return (

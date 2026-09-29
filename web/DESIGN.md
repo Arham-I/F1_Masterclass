@@ -5,25 +5,35 @@ job is to let someone step through the sessions and watch the race prediction ch
 
 ## Tokens
 
+Direction (pass 3): classier, more masculine, sharper - paddock-motorhome metal and machined edges.
+
 | Name | Hex | Use |
 |---|---|---|
-| Tarmac | `#1A1B1E` | page background (track surface, not pure black) |
-| Tarmac raised | `#232428` / `#2C2E33` | panels, rows on hover |
-| Paint line | `#383A40` | hairlines, dividers |
-| Chalk | `#F2F1EC` | primary text (pit-board paint white) |
-| Fog | `#A3A5AB` / `#76787F` | secondary / muted text |
-| Start-light red | `#E8002D` | start lights, live state, the main action - nothing decorative |
+| Gunmetal | `#1B1E22` | page background (visibly grey metal, not near-black) |
+| Panel / raised | `#23272C` / `#2B3036` | panels, rows on hover |
+| Steel hairline | `#3B4148` | dividers, borders |
+| Bone | `#ECE9E3` | primary text |
+| Titanium | `#A7ADB5` / `#8B929B` | secondary / muted text |
+| Racing red | `#C8102E` | start lights, live state, the main action - nothing decorative |
+| LED on / off | `#E3142F` / `#3A2A2E` | lamp pixels on the gantry housing `#121417` |
 | Timing purple | `#B452F0` | fastest / best of session (as on F1 timing screens) |
 | Timing green | `#2FD158` | gained places / correct call |
-| Timing yellow | `#F5C518` | caution: penalties, Sprint weekends |
+| Timing yellow | `#E8B923` | caution: penalties, Sprint weekends |
 
 Team colours come from the data and are always paired with the driver code.
 
-Type: Archivo, one family, scale 13 / 16 / 20 / 25 / 49 px (major third). The expanded width
-(wdth 125, 800) is reserved for page titles and on-screen-graphics elements: positions, driver
-codes, the winner line. Section headings are normal width, bold (`.h2` 25px, `.h3` 20px). Text and
-numbers use tabular figures. Sentence case everywhere; the only capitals are driver codes (the
-sport's own three-letter abbreviations).
+Type: Saira (squared, motorsport-technical; variable width, used at wdth 112 for titles and on-screen
+elements, 100 for section headings, weight 600) with IBM Plex Sans for text and data (tabular
+figures). Scale 13 / 16 / 20 / 25 / 49 px. Sentence case everywhere; the only capitals are driver
+codes.
+
+Edges: 2px radius everywhere (full rounding only for dots and lamps). Chamfered cut corners - the
+F1 TV-graphics motif - only on the timing tower, the result chart, the gantry housing and the main
+buttons.
+
+Start lights: each lamp is an LED cluster (a 5 x 5 pixel grid on a round lamp), lit pixels red,
+unlit pixels still visible - no glow. The logo is the same gantry as an LED matrix: a chamfered
+housing, two rows of five, three columns lit.
 
 ## Layout
 
@@ -57,6 +67,10 @@ calendar.
 
 - Pass 1: start-light gantry, timing-screen colours, removed template tells (caps eyebrows,
   dot-joined meta, one-word colour accents, arrow links, fade-in on every section).
+- Pass 3 (frontend-design skill, brief "classier, masculine, sharper"): gunmetal/bone/titanium
+  tonal palette with a deeper racing red; Saira + IBM Plex Sans; sharp 2px edges and chamfers on
+  the signature elements; glowing lamps replaced by LED-pixel clusters; new LED-matrix logo and
+  favicon.
 - Pass 2 (frontend-design skill): type scale with the wide face kept for page titles and
   on-screen elements; only the tower boxed; race control shows the latest session and folds the rest;
   accuracy chart switched from a 0-1 line chart (differences invisible) to a zoomed dot comparison

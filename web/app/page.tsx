@@ -24,7 +24,7 @@ export default function Home() {
           <div className="mt-7 flex flex-wrap gap-3">
             {latest && (
               <Link href={`/weekend/${slug(season.year, latest.round)}/`}
-                className="rounded-md bg-accent px-5 py-3 font-semibold text-white hover:bg-accent-hot">
+                className="cut-sm rounded-md bg-accent px-5 py-3 font-semibold text-white hover:bg-accent-hot">
                 {latest.status === "live" ? "Follow" : "Replay"} the {latest.name}
               </Link>
             )}

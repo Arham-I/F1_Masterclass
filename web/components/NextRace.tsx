@@ -22,7 +22,7 @@ export default function NextRace({ rounds, year }: { rounds: RoundSummary[]; yea
       <h2 className="text-sm text-ink-2">{round.status === "live" ? "This weekend" : "Next race"}</h2>
       <p className="wide mt-1 text-2xl">{round.name}</p>
       <p className="text-sm text-ink-2">{round.location}, round {round.round}</p>
-      <ol className="mt-4 flex gap-1 rounded-md bg-[#101113] p-1.5" aria-label="Sessions this weekend">
+      <ol className="cut mt-4 flex gap-1 bg-[var(--housing)] p-1.5" aria-label="Sessions this weekend">
         {sessions.map((s) => {
           const done = s.start + (s.name === "Race" ? 2 : 1) * HOUR <= t;
           return (

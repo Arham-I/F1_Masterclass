@@ -93,7 +93,7 @@ export default function Replay({ weekend, slug }: { weekend: Weekend; slug: stri
       <div className="sticky top-0 z-30 -mx-4 border-b border-line bg-bg/95 px-4 py-2.5 backdrop-blur">
         <div className="flex items-center gap-2">
           <button type="button" onClick={() => { if (i >= last) go(-1); setPlaying((p) => !p); }}
-            className="flex h-11 shrink-0 items-center gap-2 rounded-md bg-accent px-3.5 font-semibold text-white hover:bg-accent-hot sm:px-4"
+            className="cut-sm flex h-11 shrink-0 items-center gap-2 rounded-md bg-accent px-3.5 font-semibold text-white hover:bg-accent-hot sm:px-4"
             aria-label={playing ? "Pause replay" : i >= last ? "Replay from the start" : "Play the weekend"}>
             <span aria-hidden className="text-sm">{playing ? "❚❚" : i >= last ? "↺" : "▶"}</span>
             <span className="hidden text-sm sm:inline">{playing ? "Pause" : i >= last ? "Start again" : i < 0 ? "Play weekend" : "Play"}</span>
@@ -129,7 +129,7 @@ export default function Replay({ weekend, slug }: { weekend: Weekend; slug: stri
             </div>
           </section>
 
-          <section className="panel p-4 sm:p-5" aria-labelledby="pred-title">
+          <section className="panel cut cut-edge p-4 sm:p-5" aria-labelledby="pred-title">
             <div className="mb-4 flex flex-wrap items-end gap-3">
               <div className="mr-auto">
                 <h2 id="pred-title" className="h2">Predicted finishing order</h2>
@@ -188,7 +188,7 @@ export default function Replay({ weekend, slug }: { weekend: Weekend; slug: stri
                 <p className="text-sm text-ink-2">See how the prediction held up against the real result.</p>
               </div>
               <button type="button" onClick={reveal}
-                className="rounded-md bg-accent px-5 py-2.5 font-semibold text-white hover:bg-accent-hot">Lights out: show the race</button>
+                className="cut-sm rounded-md bg-accent px-5 py-2.5 font-semibold text-white hover:bg-accent-hot">Lights out: show the race</button>
             </div>
           )}
         </div>
@@ -247,7 +247,7 @@ function Intro({ weekend, onStart, onPlay }: { weekend: Weekend; onStart: () => 
           only appears when you choose lights out.
         </p>
         <div className="mt-6 flex flex-wrap gap-3">
-          <button type="button" onClick={onPlay} className="rounded-md bg-accent px-5 py-2.5 font-semibold text-white hover:bg-accent-hot">Play the weekend</button>
+          <button type="button" onClick={onPlay} className="cut-sm rounded-md bg-accent px-5 py-2.5 font-semibold text-white hover:bg-accent-hot">Play the weekend</button>
           <button type="button" onClick={onStart} className="rounded-md border border-line px-5 py-2.5 font-semibold text-ink hover:bg-surface-2">Step through it myself</button>
         </div>
       </div>
