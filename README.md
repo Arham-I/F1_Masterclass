@@ -82,6 +82,15 @@ The app reads only the files in `data/`; it needs neither FastF1 nor network acc
 
 ```bash
 pip install -r requirements-dev.txt
+python scripts/auto_update.py --push        # pull what's due, re-score, re-export, publish
+```
+
+`auto_update.py` runs the steps below for any session that finished 30 minutes ago (the race, 60)
+and does nothing if none has. Put it on a timer during a weekend — see
+[docs/season-checklist.md](docs/season-checklist.md) for the cron line and its caveats. To run the
+steps yourself:
+
+```bash
 python scripts/backfill.py --years 2026 --in-progress   # during a weekend: sessions run so far
 python scripts/backfill.py --years 2026                 # after the race
 python scripts/backtest.py                              # re-score and re-predict
@@ -120,6 +129,7 @@ f1cc/site_export.py        stored data -> JSON for the website (race result kept
 scripts/backfill.py        pull sessions from FastF1 into data/
 scripts/backtest.py        backtest + stored predictions
 scripts/export_site.py     write the website's JSON (web/data, web/public/data)
+scripts/auto_update.py     scheduled: pull finished sessions, re-score, re-export, optionally push
 scripts/build_overtakes.py on-track overtakes per race (circuit overtaking ease)
 scripts/experiments/       reusable experiments (season trend, feature retest, chained model)
 tests/                     leakage, data integrity, freshness, app smoke tests

@@ -15,10 +15,30 @@ ROW = pd.Series({"Session1": "Practice 1", "Session1DateUtc": pd.Timestamp("2026
 
 def test_only_finished_sessions_and_never_the_race():
     assert finished_sessions(ROW, pd.Timestamp("2026-09-24 09:00")) == []                 # FP1 still running
-    assert finished_sessions(ROW, pd.Timestamp("2026-09-25 10:00")) == ["Practice 1", "Practice 2"]
+    assert finished_sessions(ROW, pd.Timestamp("2026-09-25 09:55")) == ["Practice 1", "Practice 2"]
     assert finished_sessions(ROW, pd.Timestamp("2026-09-25 14:30")) == ["Practice 1", "Practice 2",
                                                                          "Practice 3", "Qualifying"]
     assert "Race" not in finished_sessions(ROW, pd.Timestamp("2027-01-01"))            # even long after
+
+
+def test_a_session_is_due_30_minutes_after_it_ends():
+    """FP1 runs 08:30-09:30, so it is due at 10:00 and not a minute before."""
+    assert finished_sessions(ROW, pd.Timestamp("2026-09-24 09:59")) == []
+    assert finished_sessions(ROW, pd.Timestamp("2026-09-24 10:00")) == ["Practice 1"]
+
+
+def test_race_is_due_only_for_the_scheduler_and_waits_longer():
+    """The race runs 11:00-13:15 (135 min allowed), so it is due at 14:15, an hour after."""
+    late = pd.Timestamp("2026-09-26 14:15")
+    assert finished_sessions(ROW, late) == ["Practice 1", "Practice 2", "Practice 3", "Qualifying"]
+    assert finished_sessions(ROW, pd.Timestamp("2026-09-26 14:14"), include_race=True)[-1] == "Qualifying"
+    assert finished_sessions(ROW, late, include_race=True)[-1] == "Race"
+
+
+def test_sprint_sessions_have_their_own_lengths():
+    sprint = pd.Series({"Session1": "Sprint", "Session1DateUtc": pd.Timestamp("2026-03-14 03:00")})
+    assert finished_sessions(sprint, pd.Timestamp("2026-03-14 04:14")) == []       # 45 min + 30
+    assert finished_sessions(sprint, pd.Timestamp("2026-03-14 04:15")) == ["Sprint"]
 
 
 @pytest.mark.skipif(not store.available_years("predictions"), reason="run scripts/backtest.py first")

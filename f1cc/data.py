@@ -53,19 +53,46 @@ def completed_rounds(year: int, today: date | None = None) -> list[int]:
     return [int(r) for r in done.RoundNumber]
 
 
-# A session's data is on FastF1 some time after it ends; practice/qualifying last about an hour.
-SESSION_READY_AFTER = pd.Timedelta(hours=2)
+# The schedule gives a session's START, so how long it runs decides when it has ended. Scheduled
+# slot lengths, generous enough to cover red flags in the shorter sessions.
+SESSION_MINUTES = {
+    "Practice 1": 60, "Practice 2": 60, "Practice 3": 60,
+    "Sprint Qualifying": 60, "Sprint Shootout": 60, "Sprint": 45,
+    "Qualifying": 60, "Race": 135,
+}
+DEFAULT_SESSION_MINUTES = 60
+
+# How long after a session ends its data is fetched. FastF1 streams the timing feed live, so the
+# laps are there almost at once; the wait is for the classification to settle. The race gets longer
+# because post-race stewards' penalties can still change the order (see docs/season-checklist.md).
+READY_AFTER_END = pd.Timedelta(minutes=30)
+RACE_READY_AFTER_END = pd.Timedelta(minutes=60)
 
 
-def finished_sessions(schedule_row: pd.Series, now: pd.Timestamp | None = None) -> list[str]:
+def session_ready_at(name: str, start) -> pd.Timestamp:
+    """When ``name`` starting at ``start`` (UTC) should be safe to pull."""
+    end = pd.Timestamp(start).tz_localize(None) + pd.Timedelta(
+        minutes=SESSION_MINUTES.get(str(name), DEFAULT_SESSION_MINUTES))
+    return end + (RACE_READY_AFTER_END if name == "Race" else READY_AFTER_END)
+
+
+def finished_sessions(schedule_row: pd.Series, now: pd.Timestamp | None = None,
+                      include_race: bool = False) -> list[str]:
     """Sessions of a weekend whose data should be available by ``now`` (UTC), in running order.
-    Never includes the Race: an in-progress weekend is exactly one whose race is still to come."""
+
+    The Race is excluded by default: an in-progress weekend is exactly one whose race is still to
+    come, and ``backfill`` treats a weekend with a stored Race as finished. ``include_race=True``
+    is for the scheduler, which needs to know when the race itself is due.
+    """
     now = now if now is not None else pd.Timestamp.now(tz="UTC").tz_localize(None)
     out = []
     for i in range(1, 6):
         name, start = schedule_row.get(f"Session{i}"), schedule_row.get(f"Session{i}DateUtc")
-        if isinstance(name, str) and name and name != "Race" and pd.notna(start) \
-                and pd.Timestamp(start).tz_localize(None) + SESSION_READY_AFTER <= now:
+        if not (isinstance(name, str) and name and pd.notna(start)):
+            continue
+        if name == "Race" and not include_race:
+            continue
+        if session_ready_at(name, start) <= now:
             out.append(name)
     return out
 

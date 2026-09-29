@@ -2,6 +2,8 @@
 half of the season in >=3 of the seasons tested and on average, without significantly hurting the
 whole season.  Usage: python scripts/experiments/evaluate_retest.py experiments_out"""
 import glob, sys, numpy as np, pandas as pd
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from scipy.stats import linregress
 S=sys.argv[1]; R=pd.concat([pd.read_parquet(p) for p in glob.glob(f"{S}/*.parquet")])
 R["phase"]=np.where(R.stage==4,"after Q","before Q")

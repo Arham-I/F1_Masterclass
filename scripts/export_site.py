@@ -67,7 +67,14 @@ def main() -> None:
     ap.add_argument("--no-fastf1", action="store_true", help="reuse the saved calendar and names")
     args = ap.parse_args()
     if not args.no_fastf1:
-        refresh_meta(site_export.SITE_YEAR)
+        try:
+            refresh_meta(site_export.SITE_YEAR)
+        except Exception as e:
+            # Unattended (scripts/auto_update.py), a FastF1 hiccup must not block the export: the
+            # calendar and names change rarely, so the saved copies are almost always current.
+            if not (SCHEDULE_FILE.exists() and DRIVERS_FILE.exists()):
+                raise
+            print(f"calendar/names refresh failed ({type(e).__name__}); using the saved copies")
     schedule = pd.read_csv(SCHEDULE_FILE)
     names = {r.driver: {"name": r["name"], "number": str(r["number"])}
              for _, r in pd.read_csv(DRIVERS_FILE, dtype={"number": str}).assign(driver=lambda d: d["driver"]).iterrows()}

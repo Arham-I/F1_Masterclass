@@ -9,9 +9,45 @@ environment (`pip install -r requirements-dev.txt`).
 
 ## 1. Every race weekend
 
+### The short version: let it run itself
+
+`scripts/auto_update.py` does the whole routine below. It pulls any session that finished 30
+minutes ago (the race, 60 — post-race penalties can still move the order), re-scores, re-exports
+the website, and with `--push` commits and pushes so Vercel redeploys.
+
+```bash
+python scripts/auto_update.py --dry-run     # what is due right now, changes nothing
+python scripts/auto_update.py               # pull + re-score + re-export
+python scripts/auto_update.py --push        # ...and publish
+```
+
+It is cheap when idle: it reads the local schedule and the stored parquet, and exits without
+touching the network if nothing is due. A full run with one new session takes about 90 seconds.
+One run at a time (`.auto_update.lock`; a lock older than 3 h is ignored as stale).
+
+Run it on a timer through a race weekend. Every 15 minutes is plenty:
+
+```cron
+*/15 * * * * cd /path/to/F1_Masterclass && .venv/bin/python scripts/auto_update.py --push >> /tmp/f1cc.log 2>&1
+```
+
+Two things to know before relying on it:
+
+- **The machine has to be awake.** A laptop asleep through qualifying runs nothing, and cron does
+  not catch up on missed runs — though the next run that *does* fire pulls everything still
+  outstanding, so a missed tick only delays the update. For unattended running, a scheduled
+  GitHub Action (which also has the repo's push rights) is the robust option.
+- **`--push` commits and pushes on its own.** Start without it for a weekend and check what lands
+  in `git status` before letting it publish.
+
+Still manual: the **starting grid** after qualifying, and the **holdout table** after each race
+(both below). Neither blocks the site.
+
+### The steps it runs
+
 | When | Run | Why |
 |---|---|---|
-| After each session (FP1, FP2, FP3, Q; ≥ 2 h after its start) | `python scripts/backfill.py --years 2026 --in-progress` | Pulls the finished sessions of the live weekend so the app shows a real forecast (listed as 🔴 LIVE) |
+| After each session (FP1, FP2, FP3, Q; 30 min after it ends) | `python scripts/backfill.py --years 2026 --in-progress` | Pulls the finished sessions of the live weekend so the app shows a real forecast (listed as 🔴 LIVE) |
 | Then | `python scripts/backtest.py` | Writes predictions for the live weekend (predicted, not scored) |
 | After Qualifying, once penalties are published | add the starting grid to `data/starting_grid.csv` (two sources; `tests/test_live.py` checks it) | FastF1 only has the grid with the race result; the app shows it next to the prediction |
 | After the race | `python scripts/backfill.py --years 2026` then `python scripts/backtest.py` | Adds the Race (and its on-track overtake count); the weekend is now scored and joins the season trend |
@@ -24,6 +60,9 @@ Traps:
 - **Pulling too early.** The backfill skips any (round, session) already stored, so a session
   pulled before FastF1 had all its data stays incomplete forever. If a live session looks thin
   (fewer than 20 drivers, few laps), delete that round from `data/*_2026.parquet` and re-pull.
+  This is also why the race waits 60 minutes rather than 30: a stewards' penalty applied after the
+  flag changes the classification, and a race stored before it lands keeps the provisional order.
+  If a penalty is announced later, delete that round and re-pull.
 - **Rate limit.** FastF1 allows ~500 API calls/hour. A weekend is well under that; a multi-season
   rebuild is not (the backfill waits it out).
 - **Offline rebuilds** (after changing `f1cc/features.py`): delete `data/{features,laps,stints}_*.parquet`

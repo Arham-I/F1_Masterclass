@@ -6,16 +6,20 @@ data/predictions_2026.parquet (per-driver predictions the app displays).
 Usage: python scripts/backtest.py [--year 2026]
 """
 import argparse
+import sys
 import warnings
+from pathlib import Path
 
-import numpy as np
-import pandas as pd
-from scipy.stats import spearmanr
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))   # runnable as `python scripts/backtest.py`
 
-from f1cc import store
-from f1cc.predict import BaselinePredictor, FeatureBuilder, RecoveryPredictor, RidgePredictor
-from f1cc.predict.base import rps
-from f1cc.replay import Cutoff
+import numpy as np  # noqa: E402
+import pandas as pd  # noqa: E402
+from scipy.stats import spearmanr  # noqa: E402
+
+from f1cc import store  # noqa: E402
+from f1cc.predict import BaselinePredictor, FeatureBuilder, RecoveryPredictor, RidgePredictor  # noqa: E402
+from f1cc.predict.base import rps  # noqa: E402
+from f1cc.replay import Cutoff  # noqa: E402
 
 warnings.filterwarnings("ignore")
 STAGES = (1, 2, 3, 4)

@@ -82,3 +82,48 @@ def test_commentary_articles():
     assert commentary.a_pct(0.863) == "an 86.3%"
     assert commentary.a_pct(0.454) == "a 45.4%"
     assert commentary.a_pct(0.11) == "an 11.0%"
+
+
+# --- the accuracy and home pages must follow the data, never a stale snapshot -----------------
+
+def _published(name: str) -> dict:
+    p = store.ROOT / "web" / "data" / f"{name}.json"
+    if not p.exists():
+        pytest.skip("run scripts/export_site.py first")
+    return json.loads(p.read_text())
+
+
+def test_published_accuracy_matches_the_stored_backtest(stored):
+    """What the Accuracy page shows is exactly what the current backtest says."""
+    _, _, bt = stored
+    fresh = site_export.build_accuracy(bt)
+    live = _published("accuracy")
+    key = lambda s: (s["stage"], s["predictor"])                                  # noqa: E731
+    assert {key(s): s for s in live["summary"]} == {key(s): s for s in fresh["summary"]}
+    assert len(live["per_round"]) == len(fresh["per_round"])
+
+
+def test_published_season_covers_every_stored_round(stored):
+    """The home page's calendar and headline numbers follow the stored rounds."""
+    tables, _, _ = stored
+    live = _published("season")
+    assert {r["round"] for r in live["rounds"]} >= set(tables["features"]["round"])
+    raced = set(tables["features"].loc[tables["features"]["session"] == "Race", "round"])
+    assert {r["round"] for r in live["rounds"] if r["status"] == "finished"} == raced
+
+
+def test_a_new_race_moves_the_accuracy_numbers(stored):
+    """Adding a race to the backtest changes what the pages report: the numbers are derived on
+    every export, so the model learning from a new result cannot leave a stale page behind."""
+    _, _, bt = stored
+    before = site_export.build_accuracy(bt)
+    extra = bt[bt["round"] == bt["round"].max()].copy()
+    extra["round"] += 1
+    extra["spearman"] = 0.0                       # a hypothetical terrible weekend
+    extra["mae_pos"] = 9.0
+    after = site_export.build_accuracy(pd.concat([bt, extra], ignore_index=True))
+    pick = lambda a: next(s for s in a["summary"]                                  # noqa: E731
+                          if s["stage"] == 4 and s["predictor"] == a["baseline"])
+    assert pick(after)["races"] == pick(before)["races"] + 1
+    assert pick(after)["spearman"] < pick(before)["spearman"]
+    assert pick(after)["mae"] > pick(before)["mae"]
