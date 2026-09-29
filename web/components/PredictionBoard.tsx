@@ -55,6 +55,7 @@ export default function PredictionBoard({ rows, prev, step, drivers }: {
   const sessionPos = new Map(step.timesheet.map((t) => [t.driver, t.pos]));
   const grid = new Map(step.grid.map((g) => [g.driver, g]));
   const showGrid = step.grid.length > 0;
+  const provisional = step.grid_state === "provisional";
   const n = rows.length;
   const cols = "grid-cols-[2rem_1.75rem_minmax(4.5rem,1fr)_4.2rem_4.2rem] md:grid-cols-[2rem_1.75rem_minmax(9rem,1.1fr)_minmax(7rem,1fr)_5.2rem_5.2rem_4.4rem_4.4rem_3.2rem]"
     + (showGrid ? " lg:grid-cols-[2rem_1.75rem_minmax(9rem,1.1fr)_minmax(7rem,1fr)_6.5rem_6.5rem_4.6rem_4.6rem_3.2rem_3.2rem]" : " lg:grid-cols-[2rem_1.75rem_minmax(9rem,1.1fr)_minmax(7rem,1fr)_6.5rem_6.5rem_4.6rem_4.6rem_3.2rem]");
@@ -72,7 +73,17 @@ export default function PredictionBoard({ rows, prev, step, drivers }: {
         <span className="hidden text-right md:block">Points<InfoTip label="Points chance" align="right">Chance of finishing in the top 10, which scores championship points.</InfoTip></span>
         <span className="hidden text-right md:block">Retire<InfoTip label="Retirement chance" align="right">Chance of not finishing (crash or failure), based on how often this team&apos;s cars have retired.</InfoTip></span>
         <span className="hidden text-right md:block">{step.short}<InfoTip label={`${step.short} position`} align="right">Where the driver placed in {step.session}, for comparison with the prediction.</InfoTip></span>
-        {showGrid && <span className="hidden text-right lg:block">Grid<InfoTip label="Starting grid" align="right">Official starting position after penalties. The prediction starts from qualifying order: drivers with grid penalties usually recover much of the lost ground.</InfoTip></span>}
+        {showGrid && (
+          <span className="hidden text-right lg:block">
+            {provisional ? "Grid*" : "Grid"}
+            <InfoTip label="Starting grid" align="right">
+              {provisional
+                ? "Qualifying order, shown while the official grid is pending: penalties are published as stewards' documents after qualifying and are not in the timing data. It is replaced by the real grid once the race has run."
+                : "Official starting position after penalties."}
+              {" The prediction starts from qualifying order either way: drivers with grid penalties usually recover much of the lost ground."}
+            </InfoTip>
+          </span>
+        )}
       </div>
       <Glide
         label="Predicted race result"
@@ -110,9 +121,15 @@ export default function PredictionBoard({ rows, prev, step, drivers }: {
           );
         }}
       />
-      {showGrid && step.grid.some((g) => g.penalty) && (
+      {showGrid && provisional && (
         <p className="mt-2 text-xs text-ink-3">
-          * Grid penalty: {step.grid.filter((g) => g.penalty).map((g) => `${g.driver} ${g.penalty}`).join("; ")}
+          * Official grid pending. This is the qualifying order; any grid penalties are applied after
+          qualifying and will show here once the race has run.
+        </p>
+      )}
+      {showGrid && !provisional && step.grid.some((g) => g.penalty) && (
+        <p className="mt-2 text-xs text-ink-3">
+          Grid penalty: {step.grid.filter((g) => g.penalty).map((g) => `${g.driver} ${g.penalty}`).join("; ")}
         </p>
       )}
       <DriverDialog row={open} driver={open ? drivers[open.driver] : undefined} onClose={() => setOpen(null)} session={step.session} />

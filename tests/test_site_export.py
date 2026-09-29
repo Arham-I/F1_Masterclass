@@ -127,3 +127,34 @@ def test_a_new_race_moves_the_accuracy_numbers(stored):
     assert pick(after)["races"] == pick(before)["races"] + 1
     assert pick(after)["spearman"] < pick(before)["spearman"]
     assert pick(after)["mae"] > pick(before)["mae"]
+
+
+# --- the starting grid: real when known, qualifying order clearly labelled while pending -------
+
+def test_grid_is_official_once_the_race_has_run(stored):
+    tables, preds, bt = stored
+    rd = _finished_round(tables["features"])
+    q = site_export.build_weekend(tables, preds, bt, YEAR, rd, {}, False, {})["steps"][-1]
+    assert q["grid_state"] == "official"
+    assert sorted(g["grid"] for g in q["grid"] if g["grid"]) == list(range(1, sum(1 for g in q["grid"] if g["grid"]) + 1))
+
+
+def test_grid_falls_back_to_qualifying_order_while_the_race_is_pending(stored):
+    """A live weekend has no official grid: penalties are published as stewards' documents, not in
+    the timing data. Show qualifying order, flagged, rather than nothing."""
+    tables, preds, bt = stored
+    f = tables["features"]
+    rd = next((r for r in sorted(set(f["round"]), reverse=True)
+               if store.starting_grid(f[f["session"] != "Race"], YEAR, r).empty), None)
+    if rd is None:
+        pytest.skip("every stored round has a hand-entered grid")
+    pending = f[~((f["round"] == rd) & (f["session"] == "Race"))]
+    q = site_export.build_weekend({**tables, "features": pending}, preds, bt, YEAR, rd, {}, True, {})["steps"][-1]
+    assert q["grid_state"] == "provisional"
+    order = [g["driver"] for g in sorted(q["grid"], key=lambda g: g["grid"])]
+    # Only drivers who actually set a qualifying time get a slot - a driver who didn't (and so
+    # starts from the back or the pit lane) is left out rather than given an invented position.
+    sheet = [t["driver"] for t in q["timesheet"] if t["driver"] in set(order)]
+    assert order == sheet
+    assert [g["grid"] for g in sorted(q["grid"], key=lambda g: g["grid"])] == list(range(1, len(order) + 1))
+    assert all(g["penalty"] is None for g in q["grid"])      # a penalty is never invented

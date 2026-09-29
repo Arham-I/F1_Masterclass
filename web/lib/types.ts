@@ -27,6 +27,9 @@ export type Step = {
   timesheet: { driver: string; pos: number; best: number | null; gap: number | null; laps: number; status: string | null }[];
   longrun: { driver: string; n: number; median: number; q1: number; q3: number }[];
   stints: { driver: string; compound: string; start: number; end: number }[];
+  // "official" = the real grid (from the race, or hand-entered after penalties are published);
+  // "provisional" = qualifying order standing in during a live weekend; null = none shown.
+  grid_state: "official" | "provisional" | null;
   grid: { driver: string; grid: number | null; penalty: string | null }[];
   prediction: { auto: string; by: Record<string, PredRow[]> };
   commentary: string[];

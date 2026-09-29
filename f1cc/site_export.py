@@ -127,13 +127,25 @@ def build_weekend(tables: dict[str, pd.DataFrame], preds: pd.DataFrame, bt: pd.D
         if len(now):
             notes += commentary.prediction_notes(now, prev, short_names)
         prev = now if len(now) else prev
-        grid = store.starting_grid(features, year, round_number) if session == "Qualifying" else pd.DataFrame()
+        # The official grid only exists once the race has run (FastF1 publishes it with the
+        # result) or once someone hand-enters it from published grids. In between - the live
+        # weekend - fall back to qualifying order and say so, rather than show nothing.
+        grid, grid_state = pd.DataFrame(), None
+        if session == "Qualifying":
+            grid = store.starting_grid(features, year, round_number)
+            if len(grid):
+                grid_state = "official"
+            elif rows["position"].notna().any():
+                grid = (rows.dropna(subset=["position"]).sort_values("position")
+                        .assign(grid=lambda d: range(1, len(d) + 1), penalty=np.nan)[["driver", "grid", "penalty"]])
+                grid_state = "provisional"
         steps.append({
             "session": session, "short": SHORT[session], "kind": KIND[session], "stage": k,
             "start_utc": session_starts.get(session),
             "timesheet": _timesheet(rows, session),
             "longrun": _longruns(lp[lp["session"] == session]) if KIND[session] == "practice" else [],
             "stints": _stints(st[st["session"] == session]),
+            "grid_state": grid_state,
             "grid": [{"driver": r.driver, "grid": None if pd.isna(r.grid) else int(r.grid),
                       "penalty": None if pd.isna(r.penalty) else str(r.penalty)}
                      for r in grid.itertuples(index=False)],
