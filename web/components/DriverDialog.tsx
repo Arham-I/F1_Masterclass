@@ -21,7 +21,7 @@ export default function DriverDialog({ row, driver, session, onClose }: {
       ref={ref}
       onClose={onClose}
       onClick={(e) => e.target === ref.current && onClose()}
-      className="m-auto w-[min(92vw,560px)] rounded-2xl border border-line bg-surface p-0 text-ink backdrop:bg-black/70 backdrop:backdrop-blur-sm"
+      className="m-auto w-[min(92vw,560px)] rounded-md border border-line bg-surface p-0 text-ink backdrop:bg-black/70 backdrop:backdrop-blur-sm"
       aria-labelledby="driver-dialog-title"
     >
       {row && (
@@ -29,15 +29,15 @@ export default function DriverDialog({ row, driver, session, onClose }: {
           <div className="flex items-start gap-3">
             <span className="mt-1 h-10 w-1.5 rounded-full" style={{ background: driver?.color }} aria-hidden />
             <div className="min-w-0">
-              <p className="eyebrow">{driver?.team} · prediction after {session}</p>
-              <h2 id="driver-dialog-title" className="display text-3xl">{driver?.name ?? row.driver}</h2>
+              <p className="label">{driver?.team}, prediction after {session}</p>
+              <h2 id="driver-dialog-title" className="wide text-2xl">{driver?.name ?? row.driver}</h2>
             </div>
             <button type="button" onClick={onClose} className="ml-auto rounded-md px-2 py-1 text-ink-2 hover:bg-surface-2 hover:text-ink" aria-label="Close">✕</button>
           </div>
           <dl className="mt-4 grid grid-cols-4 gap-2 text-center">
             {[["Predicted", `P${row.pos}`], ["Win", pct(row.p_win)], ["Podium", pct(row.p_podium)], ["Retire", pct(row.p_dnf)]].map(([k, v]) => (
-              <div key={k} className="rounded-lg bg-surface-2 px-2 py-2">
-                <dt className="eyebrow !text-[10px]">{k}</dt>
+              <div key={k} className="rounded bg-surface-2 px-2 py-2">
+                <dt className="text-xs text-ink-2">{k}</dt>
                 <dd className="num mt-0.5 font-semibold">{v}</dd>
               </div>
             ))}

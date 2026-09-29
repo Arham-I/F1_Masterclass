@@ -21,7 +21,7 @@ export default function Stints({ step, drivers }: { step: Step; drivers: Drivers
             {COMPOUNDS[c].label}
           </span>
         ))}
-        <span className="ml-auto text-ink-3">lap 1 → {maxLap}</span>
+        <span className="ml-auto text-ink-3">Laps 1 to {maxLap}</span>
       </div>
       <ul className="space-y-1" aria-label="Tyre stints per driver">
         {order.map((d) => (

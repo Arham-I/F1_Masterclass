@@ -13,70 +13,71 @@ const raceDate = (r: RoundSummary) => {
   return s ? new Date(s).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" }) : "";
 };
 
-/** Season calendar. Results are hidden by default (spoiler-free), the choice is remembered. */
+/** The season calendar as a list, like a championship calendar. Results are hidden by default so
+ *  a replay isn't spoiled; the choice is remembered in this browser. */
 export default function SeasonGrid({ rounds, drivers, year }: { rounds: RoundSummary[]; drivers: Drivers; year: number }) {
   const hydrated = useHydrated();
   const [choice, setChoice] = useState<boolean | null>(null);
-  const show = choice ?? (hydrated && readStorage(KEY) === "1");     // hidden until the browser says otherwise
+  const show = choice ?? (hydrated && readStorage(KEY) === "1");
   const toggle = () => {
     writeStorage(KEY, show ? "0" : "1");
     setChoice(!show);
   };
   return (
     <section aria-labelledby="calendar-title">
-      <div className="mb-4 flex flex-wrap items-end gap-3">
-        <div className="mr-auto">
-          <p className="eyebrow">{year} calendar</p>
-          <h2 id="calendar-title" className="display mt-1 text-4xl">Pick a weekend</h2>
-        </div>
+      <div className="mb-3 flex flex-wrap items-end gap-3">
+        <h2 id="calendar-title" className="wide mr-auto text-2xl">{year} calendar</h2>
         <button type="button" role="switch" aria-checked={show} onClick={toggle}
-          className="inline-flex items-center gap-2 rounded-full bg-surface-2 px-3 py-1.5 text-sm text-ink-2 hover:text-ink">
-          <span className={`relative h-4 w-7 rounded-full transition-colors ${show ? "bg-accent" : "bg-surface-3"}`}>
-            <span className={`absolute top-0.5 h-3 w-3 rounded-full bg-white transition-all ${show ? "left-3.5" : "left-0.5"}`} />
+          className="inline-flex items-center gap-2 rounded px-2 py-1.5 text-sm text-ink-2 hover:bg-surface-2 hover:text-ink">
+          <span className={`relative h-4 w-7 rounded-full transition-colors ${show ? "bg-ink" : "bg-surface-3"}`}>
+            <span className={`absolute top-0.5 h-3 w-3 rounded-full transition-all ${show ? "left-3.5 bg-bg" : "left-0.5 bg-ink-2"}`} />
           </span>
           Show results
         </button>
       </div>
-      <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <ol className="border-t border-line">
         {rounds.map((r) => {
           const playable = r.status !== "upcoming";
-          const body = (
+          const row = (
             <>
-              <div className="flex items-center justify-between">
-                <span className="eyebrow">Round {r.round} · {raceDate(r)}</span>
-                {r.status === "live" && <span className="inline-flex items-center gap-1 rounded-full bg-accent px-2 py-0.5 text-[10px] font-bold uppercase text-white"><span className="live-dot h-1.5 w-1.5 rounded-full bg-white" />Live</span>}
-                {r.format === "sprint" && r.status !== "live" && <span className="rounded-full bg-warn/15 px-2 py-0.5 text-[10px] font-bold uppercase text-warn">Sprint</span>}
-              </div>
-              <p className="display mt-2 text-2xl">{r.name.replace(" Grand Prix", " GP")}</p>
-              <p className="text-sm text-ink-3">{r.location}</p>
-              <div className="mt-3 min-h-[2.5rem] text-sm">
+              <span className="wide num w-8 shrink-0 text-lg text-ink-2">{r.round}</span>
+              <span className="w-16 shrink-0 text-sm text-ink-2">{raceDate(r)}</span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate font-semibold">
+                  {r.name}
+                  {r.format === "sprint" && <span className="ml-2 rounded-sm bg-warn/15 px-1.5 py-0.5 align-middle text-[11px] font-semibold text-warn">Sprint</span>}
+                </span>
+                <span className="block truncate text-sm text-ink-2">{r.location}</span>
+              </span>
+              <span className="hidden w-64 shrink-0 text-sm md:block">
                 {r.status === "finished" && (show ? (
-                  <p className="text-ink-2">
-                    Winner <b className="text-ink">{drivers[r.winner!]?.name ?? r.winner}</b>
+                  <>
+                    <span className="block">{drivers[r.winner!]?.name ?? r.winner} won</span>
                     {r.favourite && (
-                      <span className={`mt-0.5 block text-xs ${r.favourite.driver === r.winner ? "text-good" : "text-ink-3"}`}>
-                        {r.favourite.driver === r.winner ? "✓ Predicted" : `We tipped ${r.favourite.driver}`} ({pct(r.favourite.p_win, 1)} after qualifying)
+                      <span className={`block text-xs ${r.favourite.driver === r.winner ? "text-good" : "text-ink-2"}`}>
+                        {r.favourite.driver === r.winner ? "As predicted" : `We tipped ${r.favourite.driver}`}, {pct(r.favourite.p_win, 1)} after qualifying
                       </span>
                     )}
-                  </p>
-                ) : <p className="text-ink-3">Result hidden · <span className="text-ink-2">replay it first</span></p>)}
-                {r.status === "live" && <p className="text-ink-2">Sessions so far are in - follow the live forecast.</p>}
-                {r.status === "upcoming" && <p className="text-ink-3">Not raced yet</p>}
-              </div>
-              {playable && <span className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-accent-hot group-hover:gap-2 transition-all">{r.status === "live" ? "Follow live" : "Replay weekend"} →</span>}
+                  </>
+                ) : <span className="text-ink-3">Result hidden</span>)}
+                {r.status === "live" && <span className="inline-flex items-center gap-1.5 font-semibold text-accent-hot"><span className="live-dot h-2 w-2 rounded-full bg-accent" />Live weekend</span>}
+              </span>
+              <span className={`w-20 shrink-0 text-right text-sm font-semibold ${playable ? "text-ink group-hover:underline" : "text-ink-3"}`}>
+                {r.status === "live" ? "Follow" : playable ? "Replay" : "Upcoming"}
+              </span>
             </>
           );
           return (
-            <li key={r.round}>
+            <li key={r.round} className="border-b border-line">
               {playable ? (
-                <Link href={`/weekend/${slug(year, r.round)}/`} className="card group block h-full p-4 transition-colors hover:border-ink-3">{body}</Link>
+                <Link href={`/weekend/${slug(year, r.round)}/`} className="group flex items-center gap-3 px-1 py-3 hover:bg-surface">{row}</Link>
               ) : (
-                <div className="card h-full p-4 opacity-55">{body}</div>
+                <div className="flex items-center gap-3 px-1 py-3 text-ink-3">{row}</div>
               )}
             </li>
           );
         })}
-      </ul>
+      </ol>
     </section>
   );
 }

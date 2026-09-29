@@ -6,8 +6,17 @@ updates a prediction of the race result - for a past weekend replayed step by st
 weekend before its race.
 
 **Status: Day 3 of a 3-day build.** Built: data pipeline, replay and live weekends, per-session
-charts, race prediction with a backtest, race-result view. **Not built yet:** generated commentary,
-a "race starts soon" banner.
+charts, race prediction with a backtest, race-result view, generated commentary, a "race starts soon"
+banner, and a new website for a general F1 audience (`web/`, Next.js on Vercel). The original
+Streamlit app is still in place.
+
+Two front ends read the same data:
+
+- **Website** (`web/`, static Next.js, deployed on Vercel): the fan-facing version. 2026 weekends only,
+  a start-light timeline with autoplay, plain-language explanations, race-control style commentary,
+  and a "lights out" race reveal. See [web/README.md](web/README.md).
+- **Streamlit app** (`app.py`): the original analysis view, including earlier seasons' data and the
+  backtest charts.
 
 ## What the app does
 
@@ -76,6 +85,7 @@ pip install -r requirements-dev.txt
 python scripts/backfill.py --years 2026 --in-progress   # during a weekend: sessions run so far
 python scripts/backfill.py --years 2026                 # after the race
 python scripts/backtest.py                              # re-score and re-predict
+python scripts/export_site.py                           # refresh the website's data
 python -m pytest tests
 ```
 
@@ -96,6 +106,7 @@ traps (rate limits, pulling too early, offline rebuilds) and what to re-check th
 ## Project layout
 
 ```
+web/                       website (Next.js static export for Vercel) - see web/README.md
 app.py                     Streamlit app (presentation only)
 f1cc/data.py               FastF1 access, event-match guard, live-session timing
 f1cc/features.py           per-driver-per-session features from FastF1 sessions
@@ -104,8 +115,11 @@ f1cc/replay.py             replay cutoff: which sessions are visible
 f1cc/charts.py             Plotly figures (no Streamlit inside)
 f1cc/predict/              feature matrix, baseline, recovery, ridge, simulation
 f1cc/backtest_summary.py   summaries, significance, Auto
+f1cc/commentary.py         commentary sentences built only from computed numbers at each cutoff
+f1cc/site_export.py        stored data -> JSON for the website (race result kept in a separate file)
 scripts/backfill.py        pull sessions from FastF1 into data/
 scripts/backtest.py        backtest + stored predictions
+scripts/export_site.py     write the website's JSON (web/data, web/public/data)
 scripts/build_overtakes.py on-track overtakes per race (circuit overtaking ease)
 scripts/experiments/       reusable experiments (season trend, feature retest, chained model)
 tests/                     leakage, data integrity, freshness, app smoke tests

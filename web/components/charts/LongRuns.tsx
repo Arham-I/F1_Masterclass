@@ -15,7 +15,7 @@ export default function LongRuns({ step, drivers }: { step: Step; drivers: Drive
     <div>
       <div className="mb-1 grid grid-cols-[4.8rem_1fr_4.5rem] gap-2 text-[11px] text-ink-3 sm:grid-cols-[11rem_1fr_5rem]">
         <span />
-        <span className="flex justify-between"><span>◂ faster</span><span>slower ▸</span></span>
+        <span className="flex justify-between"><span>Faster</span><span>Slower</span></span>
         <span className="text-right">per lap</span>
       </div>
       <Glide
@@ -23,7 +23,7 @@ export default function LongRuns({ step, drivers }: { step: Step; drivers: Drive
         items={rows}
         keyOf={(r) => r.driver}
         rowHeight={28}
-        render={(r) => (
+        render={(r, k) => (
           <div className="grid h-full grid-cols-[4.8rem_1fr_4.5rem] items-center gap-2 text-sm sm:grid-cols-[11rem_1fr_5rem]">
             <DriverTag code={r.driver} d={drivers[r.driver]} showName />
             <span className="relative h-full">
@@ -33,7 +33,7 @@ export default function LongRuns({ step, drivers }: { step: Step; drivers: Drive
               <span className="absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-bg"
                 style={{ left: `${x(r.median)}%`, background: drivers[r.driver]?.color }} />
             </span>
-            <span className={`num text-right text-[13px] ${r.median < 0 ? "text-good" : "text-ink-2"}`}>
+            <span className={`num text-right text-[13px] ${k === 0 ? "font-semibold text-purple" : r.median < 0 ? "text-ink" : "text-ink-2"}`}>
               {r.median > 0 ? "+" : ""}{r.median.toFixed(2)}s
             </span>
           </div>

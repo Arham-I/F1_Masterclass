@@ -25,7 +25,7 @@ export const MODEL_INFO: Record<string, { label: string; blurb: string }> = {
   },
   "Grid + recovery": {
     label: "Qualifying + comeback",
-    blurb: "Qualifying order, but fast cars that qualified out of position are expected to move forward - more so at tracks where overtaking is easy.",
+    blurb: "Qualifying order, but fast cars that qualified out of position are expected to move forward, more so at tracks where overtaking is easy.",
   },
   "Ridge (all seasons)": {
     label: "Stats model (2022-26)",
@@ -49,7 +49,7 @@ export const COMPOUNDS: Record<string, { color: string; label: string; letter: s
 };
 
 export const SESSION_BLURB: Record<string, string> = {
-  practice: "Practice: teams test set-ups and tyres. Lap times are a clue, not a verdict - fuel loads and programmes differ.",
+  practice: "Practice: teams test set-ups and tyres. Lap times are a clue, not a verdict, because fuel loads and programmes differ.",
   sprint_quali: "Sprint Qualifying: a short qualifying session that sets the grid for Saturday's Sprint race.",
   sprint: "The Sprint: a short race (about a third of the distance) with its own points. A strong hint of race pace.",
   quali: "Qualifying: sets the starting grid. The single strongest clue to the race result.",

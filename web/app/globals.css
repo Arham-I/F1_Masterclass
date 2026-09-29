@@ -1,20 +1,20 @@
 @import "tailwindcss";
 
-/* ---- design tokens ------------------------------------------------------------------ */
+/* ---- tokens (see DESIGN.md) -------------------------------------------------------------- */
 :root {
-  --bg: #09090c;
-  --surface: #121217;
-  --surface-2: #1a1a21;
-  --surface-3: #23232c;
-  --line: #2a2a34;
-  --ink: #f3f3f6;
-  --ink-2: #b0b0bc;
-  --ink-3: #7c7c89;
-  --accent: #e10600;
-  --accent-hot: #ff3b2f;
-  --good: #2bd576;
-  --bad: #ff5a4f;
-  --warn: #ffb020;
+  --bg: #1a1b1e;
+  --surface: #232428;
+  --surface-2: #2c2e33;
+  --surface-3: #35373d;
+  --line: #383a40;
+  --ink: #f2f1ec;
+  --ink-2: #a3a5ab;
+  --ink-3: #8a8c93;
+  --accent: #e8002d;
+  --accent-hot: #ff2a4d;
+  --purple: #b452f0;
+  --good: #2fd158;
+  --warn: #f5c518;
   color-scheme: dark;
 }
 
@@ -29,11 +29,10 @@
   --color-ink-3: var(--ink-3);
   --color-accent: var(--accent);
   --color-accent-hot: var(--accent-hot);
+  --color-purple: var(--purple);
   --color-good: var(--good);
-  --color-bad: var(--bad);
   --color-warn: var(--warn);
-  --font-sans: var(--font-body), system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --font-display: var(--font-display-face), var(--font-body), system-ui, sans-serif;
+  --font-sans: var(--font-archivo), system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
 html {
@@ -41,46 +40,29 @@ html {
 }
 
 body {
-  background:
-    radial-gradient(1200px 500px at 85% -120px, rgba(225, 6, 0, 0.14), transparent 60%),
-    var(--bg);
+  background: var(--bg);
   color: var(--ink);
-  font-feature-settings: "tnum" 1, "cv11" 1;
+  font-variant-numeric: tabular-nums;
 }
 
-/* Display type: condensed, italic, uppercase - the speed look. */
-.display {
-  font-family: var(--font-display);
-  font-style: italic;
+/* Headings: Archivo at its widest - the stance of a car's livery lettering. */
+.wide {
+  font-stretch: 125%;
+  font-variation-settings: "wdth" 125;
   font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.01em;
-  line-height: 0.95;
+  letter-spacing: -0.015em;
+  line-height: 1.02;
 }
 
-.eyebrow {
-  font-family: var(--font-display);
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.14em;
-  font-size: 0.72rem;
-  color: var(--ink-3);
+.label {
+  font-size: 0.8125rem;
+  color: var(--ink-2);
 }
 
-.card {
-  background: linear-gradient(180deg, var(--surface-2), var(--surface));
+.panel {
+  background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 14px;
-}
-
-/* Racing stripe accent used on headings and the active timeline step. */
-.stripe {
-  background: repeating-linear-gradient(-60deg, var(--accent) 0 6px, transparent 6px 10px);
-}
-
-.checker {
-  background-image: conic-gradient(#fff 25%, transparent 0 50%, #fff 0 75%, transparent 0);
-  background-size: 10px 10px;
+  border-radius: 6px;
 }
 
 .num {
@@ -88,33 +70,58 @@ body {
 }
 
 :focus-visible {
-  outline: 2px solid var(--accent-hot);
+  outline: 2px solid var(--ink);
   outline-offset: 2px;
-  border-radius: 6px;
+  border-radius: 4px;
 }
 
-/* Rows / bars glide into place when a session is revealed. */
+/* Rows and bars move to their new place when a session is revealed (answers the viewer's step). */
 .glide {
-  transition: transform 650ms cubic-bezier(0.22, 1, 0.36, 1), opacity 400ms ease;
+  transition: transform 600ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 .grow {
-  transition: width 650ms cubic-bezier(0.22, 1, 0.36, 1), left 650ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition: width 600ms cubic-bezier(0.22, 1, 0.36, 1), left 600ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-@keyframes rise {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: none; }
+/* ---- start lights ---------------------------------------------------------------------- */
+.lamp {
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: #0d0d0f;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.9);
+  transition: background 180ms ease, box-shadow 180ms ease;
 }
-.rise {
-  animation: rise 450ms cubic-bezier(0.22, 1, 0.36, 1) both;
+.lamp.on {
+  background: radial-gradient(circle at 40% 35%, #ff6b7f, var(--accent) 55%, #9c001e);
+  box-shadow: 0 0 10px 2px rgba(232, 0, 45, 0.55);
 }
 
-@keyframes pulse-dot {
+/* The one orchestrated moment: lights come on one by one, then all go out together. */
+@keyframes lamp-seq {
+  0% { background: #0d0d0f; box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.9); }
+  1%, 99% { background: radial-gradient(circle at 40% 35%, #ff6b7f, var(--accent) 55%, #9c001e); box-shadow: 0 0 14px 3px rgba(232, 0, 45, 0.6); }
+  100% { background: #0d0d0f; box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.9); }
+}
+.lamp.sequence {
+  animation: lamp-seq var(--hold, 1200ms) linear both;
+  animation-delay: var(--delay, 0ms);
+}
+@keyframes appear {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.after-lights {
+  animation: appear 350ms ease both;
+  animation-delay: var(--delay, 0ms);
+}
+
+@keyframes blink {
   0%, 100% { opacity: 1; }
-  50% { opacity: 0.35; }
+  50% { opacity: 0.3; }
 }
 .live-dot {
-  animation: pulse-dot 1.4s ease-in-out infinite;
+  animation: blink 1.4s ease-in-out infinite;
 }
 
 @keyframes fill {
@@ -127,11 +134,10 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .glide, .grow { transition: none; }
-  .rise, .live-dot, .autoplay-fill { animation: none; }
+  .glide, .grow, .lamp { transition: none; }
+  .lamp.sequence, .after-lights, .live-dot, .autoplay-fill { animation: none; }
 }
 
-/* Thin, dark scrollbars for horizontal chart overflow on phones. */
 .scroll-x {
   overflow-x: auto;
   scrollbar-width: thin;

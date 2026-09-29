@@ -65,8 +65,8 @@ export default function WeekendTrend({ steps, upto, rowsAt, drivers }: {
         <p className="text-xs text-ink-3">Typical error of the prediction (places, for cars that finish)</p>
         <ol className="mt-2 grid gap-1.5" style={{ gridTemplateColumns: `repeat(${steps.length}, minmax(0, 1fr))` }}>
           {steps.map((s, i) => (
-            <li key={s.session} className={`rounded-md px-1 py-1.5 text-center ${i === upto ? "bg-accent/15 ring-1 ring-accent/60" : "bg-surface-2"}`}>
-              <span className="block text-[10px] uppercase tracking-wider text-ink-3">{s.short}</span>
+            <li key={s.session} className={`rounded-md px-1 py-1.5 text-center ${i === upto ? "bg-surface-3 ring-1 ring-ink" : "bg-surface-2"}`}>
+              <span className="block text-[11px] text-ink-2">{s.short}</span>
               <span className={`num block text-sm font-semibold ${i <= upto ? "" : "text-ink-3"}`}>{i <= upto ? `±${sigma[i].toFixed(1)}` : "?"}</span>
             </li>
           ))}

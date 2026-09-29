@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import InfoTip from "@/components/InfoTip";
 import PredictionBoard from "@/components/PredictionBoard";
+import Gantry, { LIGHTS_HOLD_MS, LIGHT_STEP_MS } from "@/components/Gantry";
 import RaceReveal from "@/components/RaceReveal";
 import LongRuns from "@/components/charts/LongRuns";
 import Stints from "@/components/charts/Stints";
@@ -84,82 +85,42 @@ export default function Replay({ weekend, slug }: { weekend: Weekend; slug: stri
   const prev = i > 0 ? rowsFor(steps[i - 1].stage, model).rows : undefined;
   const hasLong = !!step?.longrun.length;
   const view: Tab = tab === "longrun" && !hasLong ? "timesheet" : tab;
+  const lightsMs = (steps.length + 1) * LIGHT_STEP_MS + LIGHTS_HOLD_MS;
 
   return (
     <div className="space-y-6">
-      {/* ---- timeline ---------------------------------------------------------------- */}
-      <div className="sticky top-0 z-30 -mx-4 border-b border-line bg-bg/90 px-4 py-3 backdrop-blur">
+      <div className="sticky top-0 z-30 -mx-4 border-b border-line bg-bg/95 px-4 py-2.5 backdrop-blur">
         <div className="flex items-center gap-2">
-          <button type="button" onClick={() => { setPlaying(false); go(i - 1); }} disabled={i < 0 && !race}
-            className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-2 text-ink-2 hover:text-ink disabled:opacity-30 sm:flex"
-            aria-label="Previous session">◀</button>
           <button type="button" onClick={() => { if (i >= last) go(-1); setPlaying((p) => !p); }}
-            className="flex h-10 shrink-0 items-center gap-2 rounded-full bg-accent px-4 font-semibold text-white shadow-[0_0_24px_rgba(225,6,0,0.35)] hover:bg-accent-hot"
+            className="flex h-11 shrink-0 items-center gap-2 rounded-md bg-accent px-3.5 font-semibold text-white hover:bg-accent-hot sm:px-4"
             aria-label={playing ? "Pause replay" : i >= last ? "Replay from the start" : "Play the weekend"}>
-            <span aria-hidden>{playing ? "❚❚" : i >= last ? "↺" : "▶"}</span>
-            <span className="hidden text-sm sm:inline">{playing ? "Pause" : i >= last ? "Restart" : i < 0 ? "Play weekend" : "Play"}</span>
+            <span aria-hidden className="text-sm">{playing ? "❚❚" : i >= last ? "↺" : "▶"}</span>
+            <span className="hidden text-sm sm:inline">{playing ? "Pause" : i >= last ? "Start again" : i < 0 ? "Play weekend" : "Play"}</span>
           </button>
-          <ol className="scroll-x flex min-w-0 flex-1 items-center gap-1" aria-label="Weekend sessions">
-            {steps.map((s, k) => {
-              const state = race || k < i ? "done" : k === i ? "now" : "next";
-              return (
-                <li key={s.session} className="min-w-[3.1rem] flex-1 sm:min-w-[4.2rem]">
-                  <button type="button" onClick={() => { setPlaying(false); go(k); }} aria-current={k === i && !race ? "step" : undefined}
-                    className={`relative w-full overflow-hidden rounded-md px-1 py-2 text-center text-[13px] font-semibold transition-colors sm:px-2 ${
-                      state === "now" ? "bg-ink text-bg" : state === "done" ? "bg-surface-3 text-ink" : "bg-surface-2 text-ink-3 hover:text-ink-2"}`}>
-                    {s.short}
-                    {playing && k === i + 1 && <span key={i} className="autoplay-fill absolute inset-x-0 bottom-0 h-0.5 bg-accent" style={{ ["--autoplay-ms" as string]: `${i < 0 ? 900 : AUTOPLAY_MS}ms` }} />}
-                  </button>
-                </li>
-              );
-            })}
-            <li className="min-w-[3.9rem] flex-1 sm:min-w-[4.6rem]">
-              {canReveal ? (
-                <button type="button" disabled={i < last && !race}
-                  onClick={reveal}
-                  aria-current={race ? "step" : undefined}
-                  className={`relative w-full overflow-hidden rounded-md px-1 py-2 text-[13px] font-semibold sm:px-2 ${
-                    race ? "bg-accent text-white" : i >= last ? "bg-accent/20 text-ink ring-1 ring-accent" : "bg-surface-2 text-ink-3 opacity-60"}`}
-                  title={i < last ? "Finish the replay to reveal the race" : "Reveal the race result"}>
-                  <span aria-hidden className="mr-1">🏁</span>Race
-                </button>
-              ) : (
-                <span className="block w-full rounded-md border border-dashed border-line px-2 py-2 text-center text-[13px] text-ink-3">Race</span>
-              )}
-            </li>
-          </ol>
-          <button type="button" onClick={() => { setPlaying(false); go(i + 1); }} disabled={i >= last}
-            className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-2 text-ink-2 hover:text-ink disabled:opacity-30 sm:flex"
-            aria-label="Next session">▶</button>
+          <Gantry steps={steps} i={i} race={race} live={weekend.live} playing={playing} autoplayMs={AUTOPLAY_MS}
+            onGo={(k) => { setPlaying(false); go(k); }} onReveal={reveal} />
+          <div className="hidden shrink-0 flex-col gap-1 sm:flex">
+            <button type="button" onClick={() => { setPlaying(false); go(i - 1); }} disabled={i < 0 && !race}
+              className="h-5 w-8 rounded bg-surface-2 text-[10px] text-ink-2 hover:text-ink disabled:opacity-30" aria-label="Previous session">◀</button>
+            <button type="button" onClick={() => { setPlaying(false); go(i + 1); }} disabled={i >= last}
+              className="h-5 w-8 rounded bg-surface-2 text-[10px] text-ink-2 hover:text-ink disabled:opacity-30" aria-label="Next session">▶</button>
+          </div>
         </div>
       </div>
 
-      {/* ---- body -------------------------------------------------------------------- */}
       {race ? (
-        <RaceReveal weekend={weekend} slug={slug} model={model} rowsFor={rowsFor} />
+        <div className="after-lights" style={{ ["--delay" as string]: `${lightsMs}ms` }}>
+          <RaceReveal weekend={weekend} slug={slug} model={model} rowsFor={rowsFor} />
+        </div>
       ) : !step ? (
-        <Intro weekend={weekend} onStart={() => { go(0); }} onPlay={() => setPlaying(true)} />
+        <Intro weekend={weekend} onStart={() => go(0)} onPlay={() => setPlaying(true)} />
       ) : (
-        <div key={step.session} className="space-y-6">
-          <section className="grid gap-4 lg:grid-cols-[1.05fr_1fr]" aria-label={`After ${step.session}`}>
-            <div className="card rise relative overflow-hidden p-5">
-              <div className="stripe absolute inset-y-0 left-0 w-1.5 opacity-80" aria-hidden />
-              <p className="eyebrow">After {step.session}</p>
-              <h2 className="display mt-1 text-3xl">What we learned</h2>
-              <ul className="mt-3 space-y-2.5 text-[15px] leading-relaxed text-ink-2">
-                {step.commentary.map((c, k) => (
-                  <li key={c} className="rise flex gap-2.5" style={{ animationDelay: `${120 + k * 90}ms` }}>
-                    <span aria-hidden className="mt-2 h-1.5 w-1.5 shrink-0 rotate-45 bg-accent" />
-                    <span>{c}</span>
-                  </li>
-                ))}
-              </ul>
-              <p className="mt-4 text-xs text-ink-3">{SESSION_BLURB[step.kind]}</p>
-            </div>
-            <div className="card p-5">
-              <p className="eyebrow">Through the weekend</p>
-              <h2 className="display mt-1 text-3xl">Win chances
-                <InfoTip label="Win chances">The four drivers most likely to win right now, and how their chances moved after each session. Below: how far off a typical prediction is - it shrinks as the weekend reveals more.</InfoTip>
+        <div className="space-y-6">
+          <section className="grid gap-4 lg:grid-cols-[1.1fr_1fr]" aria-label={`After ${step.session}`}>
+            <RaceControl steps={steps.slice(0, i + 1)} />
+            <div className="panel p-5">
+              <h2 className="wide text-lg">Who can win
+                <InfoTip label="Who can win">The four drivers most likely to win right now, and how their chances moved after each session. Underneath: how far off a typical prediction is at each point. It shrinks as the weekend reveals more.</InfoTip>
               </h2>
               <div className="mt-3">
                 <WeekendTrend steps={steps} upto={i} rowsAt={(k) => rowsFor(steps[k].stage, model).rows} drivers={weekend.drivers} />
@@ -167,14 +128,16 @@ export default function Replay({ weekend, slug }: { weekend: Weekend; slug: stri
             </div>
           </section>
 
-          <section className="card p-4 sm:p-5" aria-labelledby="pred-title">
+          <section className="panel p-4 sm:p-5" aria-labelledby="pred-title">
             <div className="mb-4 flex flex-wrap items-end gap-3">
               <div className="mr-auto">
-                <p className="eyebrow">Race prediction · made after {step.session}</p>
-                <h2 id="pred-title" className="display mt-1 text-3xl">Predicted finishing order</h2>
-                {weekend.live && <p className="mt-1 text-sm text-warn">Live forecast - the race has not been run yet.</p>}
+                <h2 id="pred-title" className="wide text-2xl">Predicted finishing order</h2>
+                <p className="mt-1 text-sm text-ink-2">
+                  {weekend.live ? <span className="text-warn">Live forecast: the race hasn&apos;t been run yet. </span> : null}
+                  Made after {step.session}, using only what was known then. Select a driver for the full picture.
+                </p>
               </div>
-              <label className="text-xs text-ink-3">
+              <label className="text-sm text-ink-2">
                 <span className="mb-1 flex items-center">Model
                   <InfoTip label="Which model?" align="right">
                     {model === AUTO ? MODEL_INFO["Auto (best record this season)"].blurb : MODEL_INFO[model]?.blurb}
@@ -182,81 +145,78 @@ export default function Replay({ weekend, slug }: { weekend: Weekend; slug: stri
                   </InfoTip>
                 </span>
                 <select value={model} onChange={(e) => setModel(e.target.value)}
-                  className="rounded-md border border-line bg-surface-2 px-2.5 py-1.5 text-sm text-ink">
+                  className="rounded border border-line bg-surface-2 px-2.5 py-1.5 text-sm text-ink">
                   <option value={AUTO}>Auto (recommended)</option>
                   {models.map((m) => <option key={m} value={m}>{modelLabel(m)}</option>)}
                 </select>
               </label>
             </div>
-            <Podium rows={now!.rows} weekend={weekend} />
-            <p className="mb-2 mt-5 text-xs text-ink-3">Tap a driver for the full picture. Arrows show the change since the previous session.</p>
             <PredictionBoard rows={now!.rows} prev={prev} step={step} drivers={weekend.drivers} />
           </section>
 
-          <section className="card p-4 sm:p-5" aria-labelledby="session-title">
-            <div className="mb-4 flex flex-wrap items-end gap-3">
-              <div className="mr-auto">
-                <p className="eyebrow">{step.session}</p>
-                <h2 id="session-title" className="display mt-1 text-3xl">Session data</h2>
-              </div>
-              <div className="flex gap-1 rounded-lg bg-surface-2 p-1" role="tablist" aria-label="Session charts">
+          <section className="panel p-4 sm:p-5" aria-labelledby="session-title">
+            <div className="mb-3 flex flex-wrap items-end gap-3">
+              <h2 id="session-title" className="wide mr-auto text-2xl">{step.session}</h2>
+              <div className="flex gap-1 rounded-md bg-surface-2 p-1" role="tablist" aria-label="Session charts">
                 {([["timesheet", step.kind === "sprint" ? "Result" : "Timesheet"], ["longrun", "Race pace"], ["tyres", "Tyres"]] as [Tab, string][]).map(([t, label]) => (
                   <button key={t} type="button" role="tab" aria-selected={view === t} disabled={t === "longrun" && !hasLong}
                     onClick={() => setTab(t)}
-                    className={`rounded-md px-3 py-1.5 text-sm font-medium ${view === t ? "bg-ink text-bg" : "text-ink-2 hover:text-ink disabled:opacity-35"}`}>
+                    className={`rounded px-3 py-1.5 text-sm ${view === t ? "bg-ink font-semibold text-bg" : "text-ink-2 hover:text-ink disabled:opacity-35"}`}>
                     {label}
                   </button>
                 ))}
               </div>
             </div>
-            <p className="mb-4 text-sm text-ink-3">
-              {view === "timesheet" && (step.kind === "sprint" ? "Official Sprint result." :
-                step.kind === "quali" ? "Official qualifying order. Bars show the gap to pole on each driver's best lap." :
-                "Each driver's fastest lap, as a gap to the quickest. Practice times are a clue only: teams run different fuel loads and tyres.")}
-              {view === "longrun" && "Race-simulation runs: laps done back-to-back on one set of tyres, compared with the typical car on the same tyre. The dot is the typical lap; the bar shows the middle half of the laps. Further left = faster race pace."}
-              {view === "tyres" && "Every run each driver did, coloured by tyre compound (Soft is fastest but wears quickest, Hard is slowest but lasts longest)."}
+            <p className="mb-4 max-w-3xl text-sm text-ink-2">
+              {view === "timesheet" && (step.kind === "sprint" ? "The official Sprint result." :
+                step.kind === "quali" ? "The official qualifying order. Bars show each driver's gap to pole; the fastest lap is in purple, as on the timing screens." :
+                "Each driver's fastest lap as a gap to the quickest (in purple). Practice times are a clue only: teams run different fuel loads and tyres.")}
+              {view === "longrun" && "Race simulations: laps run back to back on one set of tyres, compared with the typical car on the same tyre. The dot is the typical lap, the bar covers the middle half. Further left means faster race pace."}
+              {view === "tyres" && "Every run each driver did, coloured by tyre. Softs are fastest but wear quickest; hards are slowest but last longest."}
             </p>
             {view === "timesheet" && <Timesheet step={step} drivers={weekend.drivers} />}
             {view === "longrun" && <LongRuns step={step} drivers={weekend.drivers} />}
             {view === "tyres" && <Stints step={step} drivers={weekend.drivers} />}
+            <p className="mt-4 text-xs text-ink-3">{SESSION_BLURB[step.kind]}</p>
           </section>
 
-          {i === last && canReveal && (
-            <div className="card flex flex-wrap items-center gap-4 p-5">
+          {i === last && !weekend.live && (
+            <div className="flex flex-wrap items-center gap-4 border-y border-line py-5">
               <div className="mr-auto">
-                <p className="display text-2xl">That&apos;s every session before the race.</p>
-                <p className="text-sm text-ink-2">Ready to see how the prediction held up?</p>
+                <p className="wide text-xl">Every session before the race is in.</p>
+                <p className="text-sm text-ink-2">See how the prediction held up against the real result.</p>
               </div>
               <button type="button" onClick={reveal}
-                className="rounded-full bg-accent px-5 py-2.5 font-semibold text-white hover:bg-accent-hot">🏁 Reveal race result</button>
+                className="rounded-md bg-accent px-5 py-2.5 font-semibold text-white hover:bg-accent-hot">Lights out: show the race</button>
             </div>
           )}
         </div>
       )}
-      <p className="text-center text-xs text-ink-3">Tip: use ← → keys to step through the weekend. Each prediction uses only the sessions before it.</p>
+      <p className="text-xs text-ink-3">Use the ← and → keys to step through the weekend.</p>
     </div>
   );
 }
 
-function Podium({ rows, weekend }: { rows: PredRow[]; weekend: Weekend }) {
-  const top = rows.slice(0, 3);
+/** Commentary for every revealed session, newest first, in the style of race-control messages. */
+function RaceControl({ steps }: { steps: Weekend["steps"] }) {
   return (
-    <ol className="grid grid-cols-3 gap-2 sm:gap-3" aria-label="Predicted podium">
-      {top.map((r, k) => {
-        const d = weekend.drivers[r.driver];
-        return (
-          <li key={r.driver} className="rise relative overflow-hidden rounded-xl border border-line bg-surface-2 p-3 sm:p-4" style={{ animationDelay: `${k * 80}ms` }}>
-            <span aria-hidden className="absolute inset-x-0 top-0 h-1" style={{ background: d?.color }} />
-            <span className="display absolute -right-1 -top-2 text-6xl text-white/5 sm:text-7xl" aria-hidden>{k + 1}</span>
-            <p className="eyebrow">P{k + 1}</p>
-            <p className="display mt-1 truncate text-2xl sm:text-3xl">{r.driver}</p>
-            <p className="hidden truncate text-sm text-ink-2 sm:block">{d?.name}</p>
-            <p className="num mt-2 text-sm"><b className="text-ink">{(r.p_win * 100).toFixed(2)}%</b> <span className="text-ink-3">win</span></p>
-            <p className="num text-sm"><b className="text-ink">{(r.p_podium * 100).toFixed(2)}%</b> <span className="text-ink-3">podium</span></p>
+    <div className="panel flex flex-col p-5">
+      <h2 className="wide text-lg">Race control</h2>
+      <p className="text-sm text-ink-2">What each session told us, newest first.</p>
+      <ol className="mt-3 max-h-[22rem] space-y-4 overflow-y-auto pr-1">
+        {[...steps].reverse().map((s, k) => (
+          <li key={s.session} className={k === 0 ? "" : "opacity-70"}>
+            <p className="mb-1.5 flex items-center gap-2 text-xs text-ink-2">
+              <span className={`rounded-sm px-1.5 py-0.5 font-semibold ${k === 0 ? "bg-ink text-bg" : "bg-surface-3 text-ink"}`}>{s.short}</span>
+              {k === 0 ? "Latest" : null}
+            </p>
+            <ul className="space-y-1.5 text-[15px] leading-snug">
+              {s.commentary.map((c) => <li key={c}>{c}</li>)}
+            </ul>
           </li>
-        );
-      })}
-    </ol>
+        ))}
+      </ol>
+    </div>
   );
 }
 
@@ -268,32 +228,31 @@ function Intro({ weekend, onStart, onPlay }: { weekend: Weekend; onStart: () => 
     ? Object.fromEntries(weekend.steps.filter((s) => s.start_utc).map((s) => [s.session, fmt.format(new Date(s.start_utc!))]))
     : {};
   return (
-    <section className="card rise grid gap-6 p-6 md:grid-cols-[1.2fr_1fr]" aria-label="How the replay works">
+    <section className="grid gap-8 md:grid-cols-[1.2fr_1fr]" aria-label="How the replay works">
       <div>
-        <p className="eyebrow">{weekend.live ? "Live weekend" : "Replay mode"}</p>
-        <h2 className="display mt-1 text-4xl">{weekend.live ? "Follow the weekend so far" : "Relive the weekend, one session at a time"}</h2>
-        <p className="mt-3 max-w-prose text-[15px] leading-relaxed text-ink-2">
-          After each session you&apos;ll see what happened, how our race prediction changed, and how sure it is.
-          Nothing from later sessions - and never the race result - is shown until you get there, exactly as it
-          looked at the time.
+        <h2 className="wide text-3xl">{weekend.live ? "Follow the weekend so far" : "Relive it one session at a time"}</h2>
+        <p className="mt-3 max-w-prose text-[16px] leading-relaxed text-ink-2">
+          Each session lights one of the start lights. After each one you&apos;ll see what happened, how the race
+          prediction moved and how sure it is. Later sessions stay hidden until you reach them, and the race result
+          only appears when you choose lights out.
         </p>
-        <div className="mt-5 flex flex-wrap gap-3">
-          <button type="button" onClick={onPlay} className="rounded-full bg-accent px-5 py-2.5 font-semibold text-white hover:bg-accent-hot">▶ Play weekend</button>
-          <button type="button" onClick={onStart} className="rounded-full bg-surface-3 px-5 py-2.5 font-semibold text-ink hover:bg-line">Step through myself</button>
+        <div className="mt-6 flex flex-wrap gap-3">
+          <button type="button" onClick={onPlay} className="rounded-md bg-accent px-5 py-2.5 font-semibold text-white hover:bg-accent-hot">Play the weekend</button>
+          <button type="button" onClick={onStart} className="rounded-md border border-line px-5 py-2.5 font-semibold text-ink hover:bg-surface-2">Step through it myself</button>
         </div>
       </div>
       <div>
-        <p className="eyebrow mb-2">Sessions</p>
-        <ol className="space-y-1.5">
+        <h3 className="text-sm font-semibold text-ink-2">Sessions{hydrated ? " (your local time)" : ""}</h3>
+        <ol className="mt-2 divide-y divide-line border-y border-line">
           {weekend.steps.map((s) => (
-            <li key={s.session} className="flex items-center justify-between rounded-lg bg-surface-2 px-3 py-2 text-sm">
-              <span className="font-medium">{s.session}</span>
-              <span className="num text-ink-3">{times[s.session] ?? ""}</span>
+            <li key={s.session} className="flex items-center justify-between py-2 text-sm">
+              <span>{s.session}</span>
+              <span className="text-ink-2">{times[s.session] ?? ""}</span>
             </li>
           ))}
-          <li className="flex items-center justify-between rounded-lg border border-accent/40 bg-accent/10 px-3 py-2 text-sm">
-            <span className="font-semibold">🏁 Race</span>
-            <span className="text-ink-3">{weekend.live ? "not run yet" : "revealed at the end"}</span>
+          <li className="flex items-center justify-between py-2 text-sm">
+            <span className="font-semibold">Race</span>
+            <span className="text-ink-2">{weekend.live ? "Not run yet" : "Revealed at the end"}</span>
           </li>
         </ol>
       </div>

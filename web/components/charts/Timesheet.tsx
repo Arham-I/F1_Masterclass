@@ -25,13 +25,13 @@ export default function Timesheet({ step, drivers }: { step: Step; drivers: Driv
               {!isRace && r.gap != null && (
                 <span
                   className="grow absolute inset-y-0 left-0 rounded-sm opacity-90"
-                  style={{ width: `${Math.max(1.5, (r.gap / max) * 100)}%`, background: drivers[r.driver]?.color ?? "#888" }}
+                  style={{ width: `${Math.max(1.5, (r.gap / max) * 100)}%`, background: r.gap === 0 ? "var(--purple)" : drivers[r.driver]?.color ?? "#888" }}
                 />
               )}
             </span>
             <span className="num text-right text-[13px] text-ink-2">
-              {isRace ? (out ? <span className="text-bad">{r.status}</span> : r.pos === 1 ? "Winner" : "") :
-                r.gap === 0 ? <b className="text-ink">{lapTime(r.best)}</b> : gap(r.gap)}
+              {isRace ? (out ? <span className="text-warn">{r.status}</span> : r.pos === 1 ? "Winner" : "") :
+                r.gap === 0 ? <b className="text-purple">{lapTime(r.best)}</b> : gap(r.gap)}
             </span>
           </div>
         );

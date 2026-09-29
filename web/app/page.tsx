@@ -1,4 +1,5 @@
 import Link from "next/link";
+import NextRace from "@/components/NextRace";
 import SeasonGrid from "@/components/SeasonGrid";
 import { getAccuracy, getSeason } from "@/lib/data";
 import { slug } from "@/lib/format";
@@ -7,54 +8,38 @@ export default function Home() {
   const season = getSeason();
   const acc = getAccuracy();
   const done = season.rounds.filter((r) => r.status !== "upcoming");
-  const latest = [...done].reverse().find((r) => r.status === "live") ?? done[done.length - 1];
+  const latest = done.find((r) => r.status === "live") ?? done[done.length - 1];
   const afterQ = acc.summary.find((s) => s.stage === 4 && s.predictor === acc.auto)!;
   const base = acc.summary.find((s) => s.stage === 4 && s.predictor === acc.baseline)!;
   const wins = Math.round(afterQ.winner_hit * afterQ.races);
   return (
     <div className="space-y-12">
-      <section className="relative overflow-hidden rounded-2xl border border-line bg-surface p-6 sm:p-10">
-        <div aria-hidden className="stripe absolute -right-10 top-0 h-full w-40 -skew-x-12 opacity-20" />
-        <div aria-hidden className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-accent/25 blur-3xl" />
-        <p className="eyebrow relative">Formula 1 · {season.year} season</p>
-        <h1 className="display relative mt-3 max-w-3xl text-5xl sm:text-7xl">
-          Every session.<br /><span className="text-accent">Every twist.</span><br />One prediction.
-        </h1>
-        <p className="relative mt-5 max-w-xl text-[17px] leading-relaxed text-ink-2">
-          Replay each {season.year} race weekend from first practice to qualifying and watch the race prediction
-          sharpen after every session - then reveal how it really ended.
-        </p>
-        <div className="relative mt-7 flex flex-wrap gap-3">
-          {latest && (
-            <Link href={`/weekend/${slug(season.year, latest.round)}/`}
-              className="rounded-full bg-accent px-6 py-3 font-semibold text-white shadow-[0_0_30px_rgba(225,6,0,0.4)] hover:bg-accent-hot">
-              ▶ {latest.status === "live" ? "Follow" : "Replay"} the {latest.name.replace(" Grand Prix", " GP")}
-            </Link>
-          )}
-          <Link href="/guide/" className="rounded-full bg-surface-3 px-6 py-3 font-semibold text-ink hover:bg-line">How it works</Link>
+      <section className="grid items-start gap-8 lg:grid-cols-[1.5fr_1fr]">
+        <div className="pt-2">
+          <h1 className="wide max-w-2xl text-4xl sm:text-6xl">Relive every {season.year} race weekend, one session at a time.</h1>
+          <p className="mt-5 max-w-xl text-[17px] leading-relaxed text-ink-2">
+            Step from first practice to qualifying and watch the race prediction change after every session, using
+            only what was known at that point. Then turn the lights out and see how it really finished.
+          </p>
+          <div className="mt-7 flex flex-wrap gap-3">
+            {latest && (
+              <Link href={`/weekend/${slug(season.year, latest.round)}/`}
+                className="rounded-md bg-accent px-5 py-3 font-semibold text-white hover:bg-accent-hot">
+                {latest.status === "live" ? "Follow" : "Replay"} the {latest.name}
+              </Link>
+            )}
+            <Link href="/guide/" className="rounded-md border border-line px-5 py-3 font-semibold text-ink hover:bg-surface-2">How it works</Link>
+          </div>
         </div>
+        <NextRace rounds={season.rounds} year={season.year} />
       </section>
 
-      <section aria-labelledby="record-title" className="grid gap-3 sm:grid-cols-3">
-        <h2 id="record-title" className="sr-only">Prediction record this season</h2>
-        <Link href="/accuracy/" className="card group p-5 hover:border-ink-3">
-          <p className="eyebrow">Winner picked</p>
-          <p className="display mt-2 text-5xl">{wins}<span className="text-2xl text-ink-3"> / {afterQ.races}</span></p>
-          <p className="mt-1 text-sm text-ink-2">races, predicting after qualifying</p>
-        </Link>
-        <Link href="/accuracy/" className="card group p-5 hover:border-ink-3">
-          <p className="eyebrow">Podium finishers called</p>
-          <p className="display mt-2 text-5xl">{afterQ.podium_hits.toFixed(1)}<span className="text-2xl text-ink-3"> / 3</span></p>
-          <p className="mt-1 text-sm text-ink-2">on average per race</p>
-        </Link>
-        <Link href="/accuracy/" className="card group p-5 hover:border-ink-3">
-          <p className="eyebrow">Typical miss</p>
-          <p className="display mt-2 text-5xl">{afterQ.mae.toFixed(1)}<span className="text-2xl text-ink-3"> places</span></p>
-          <p className="mt-1 text-sm text-ink-2">
-            per driver · simple &ldquo;qualifying order&rdquo; rule: {base.mae.toFixed(1)} <span className="text-accent-hot group-hover:underline">details →</span>
-          </p>
-        </Link>
-      </section>
+      <p className="max-w-3xl border-l-2 border-good pl-4 text-[15px] leading-relaxed text-ink-2">
+        So far this season, predicting after qualifying, our pick has won <b className="text-ink">{wins} of {afterQ.races}</b> races
+        and we&apos;ve named <b className="text-ink">{afterQ.podium_hits.toFixed(1)} of the 3</b> podium finishers on average.
+        A typical driver finishes <b className="text-ink">{afterQ.mae.toFixed(1)} places</b> from our prediction; simply
+        assuming the qualifying order gives {base.mae.toFixed(1)}. <Link href="/accuracy/" className="font-semibold text-ink underline decoration-line underline-offset-4 hover:decoration-ink">See the full record</Link>
+      </p>
 
       <SeasonGrid rounds={season.rounds} drivers={season.drivers} year={season.year} />
     </div>

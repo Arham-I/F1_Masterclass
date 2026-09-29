@@ -21,16 +21,17 @@ export default async function WeekendPage({ params }: PageProps<"/weekend/[slug]
   return (
     <div>
       <nav aria-label="Breadcrumb" className="mb-4 text-sm text-ink-3">
-        <Link href="/" className="hover:text-ink">Season {w.year}</Link> <span aria-hidden>/</span> Round {w.round}
+        <Link href="/" className="hover:text-ink">{w.year} calendar</Link>
       </nav>
-      <header className="relative mb-6 overflow-hidden">
-        <p className="eyebrow">Round {w.round} · {w.location} · {date}</p>
-        <h1 className="display mt-2 text-5xl sm:text-6xl">{w.name.replace(" Grand Prix", "")} <span className="text-accent">Grand Prix</span></h1>
-        <div className="mt-3 flex flex-wrap gap-2 text-xs font-semibold uppercase tracking-wider">
-          {w.live && <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-2.5 py-1 text-white"><span className="live-dot h-1.5 w-1.5 rounded-full bg-white" />Live weekend</span>}
-          {w.format === "sprint" && <span className="rounded-full bg-warn/15 px-2.5 py-1 text-warn">Sprint weekend</span>}
-          <span className="rounded-full bg-surface-2 px-2.5 py-1 text-ink-2">{w.steps.length} sessions to replay</span>
-        </div>
+      <header className="mb-6">
+        <h1 className="wide text-4xl sm:text-5xl">{w.name}</h1>
+        <p className="mt-2 text-ink-2">Round {w.round} in {w.location}, {date}</p>
+        {(w.live || w.format === "sprint") && (
+          <div className="mt-3 flex flex-wrap gap-2 text-xs font-semibold">
+            {w.live && <span className="inline-flex items-center gap-1.5 rounded-sm bg-accent px-2 py-1 text-white"><span className="live-dot h-1.5 w-1.5 rounded-full bg-white" />Live weekend</span>}
+            {w.format === "sprint" && <span className="rounded-sm bg-warn/15 px-2 py-1 text-warn">Sprint weekend</span>}
+          </div>
+        )}
       </header>
       <Replay weekend={w} slug={slug} />
     </div>

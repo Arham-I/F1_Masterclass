@@ -34,7 +34,7 @@ export default function InfoTip({ label, children, align = "left" }: {
         <span
           id={id}
           role="tooltip"
-          className={`rise absolute top-6 z-30 w-64 rounded-lg border border-line bg-surface-3 p-3 text-left font-sans text-[13px] font-normal leading-snug text-ink-2 shadow-2xl ${align === "right" ? "right-0" : "left-0"}`}
+          className={`absolute top-6 z-30 w-64 rounded border border-line bg-surface-3 p-3 text-left font-sans text-[13px] font-normal leading-snug text-ink-2 shadow-2xl ${align === "right" ? "right-0" : "left-0"}`}
         >
           <b className="mb-1 block text-ink">{label}</b>
           {children}

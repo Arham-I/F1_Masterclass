@@ -1,15 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import type { RoundSummary } from "@/lib/types";
 import { slug } from "@/lib/format";
 
 const HOUR = 3_600_000;
-const DURATION: Record<string, number> = { Race: 2 * HOUR, Sprint: 1 * HOUR };
+const DURATION: Record<string, number> = { Race: 2 * HOUR };
 const SHORT: Record<string, string> = {
   "Practice 1": "FP1", "Practice 2": "FP2", "Practice 3": "FP3",
-  "Sprint Qualifying": "Sprint Qualifying", Sprint: "Sprint", Qualifying: "Qualifying", Race: "Race",
+  "Sprint Qualifying": "Sprint Qualifying", Sprint: "the Sprint", Qualifying: "Qualifying", Race: "the race",
 };
 
 type Slot = { round: RoundSummary; session: string; start: number };
@@ -22,48 +22,45 @@ export function countdown(ms: number): string {
   return `${mm}m`;
 }
 
-/** Site-wide strip: live session, "race starts soon" countdown, or the next race. Computed in the
- *  browser from the published calendar, so it stays current without rebuilding the site. */
+// The current time, refreshed every 30 s; null while the pre-built page hydrates.
+const subscribe = (cb: () => void) => { const id = setInterval(cb, 30_000); return () => clearInterval(id); };
+export const useNow = () => useSyncExternalStore(subscribe, () => Math.floor(Date.now() / 30_000) * 30_000, () => null);
+
+/** Site-wide strip: a live session, the "race starts soon" countdown, or the next race. Worked out
+ *  in the browser from the published calendar, so it stays current without rebuilding the site. */
 export default function RaceBanner({ rounds, year }: { rounds: RoundSummary[]; year: number }) {
-  const [now, setNow] = useState<number | null>(null);
-  useEffect(() => {
-    const tick = () => setNow(Date.now());
-    tick();
-    const id = setInterval(tick, 30_000);
-    return () => clearInterval(id);
-  }, []);
+  const now = useNow();
+  const empty = <div className="h-9 border-b border-line" aria-hidden />;
+  if (now == null) return empty;
 
   const slots: Slot[] = rounds.flatMap((round) =>
     round.sessions.filter((s) => s.start_utc).map((s) => ({ round, session: s.name, start: Date.parse(s.start_utc!) })),
   );
-  if (now == null) return <div className="h-9 border-b border-line bg-surface" aria-hidden />;
-
   const live = slots.find((s) => s.start <= now && now < s.start + (DURATION[s.session] ?? HOUR));
   const next = slots.filter((s) => s.start > now).sort((a, b) => a.start - b.start)[0];
   const target = live ?? next;
-  if (!target) return <div className="h-9 border-b border-line bg-surface" aria-hidden />;
+  if (!target) return empty;
 
   const r = target.round;
-  const where = `${r.name} · ${r.location}`;
+  const where = `${r.name}, ${r.location}`;
   const href = r.status !== "upcoming" ? `/weekend/${slug(year, r.round)}/` : null;
-  let tone = "bg-surface text-ink-2";
+  let tone = "text-ink-2";
   let text: React.ReactNode;
   if (live) {
     tone = "bg-accent text-white";
     text = (<><span className="live-dot mr-2 inline-block h-2 w-2 rounded-full bg-white align-middle" />
-      <b className="font-semibold">LIVE NOW</b> · {SHORT[live.session]} · {where}</>);
+      <b className="font-semibold">Live now:</b> {SHORT[live.session]} at the {where}</>);
   } else if (next.session === "Race" && next.start - now < 24 * HOUR) {
-    tone = "bg-gradient-to-r from-accent to-[#8a0400] text-white";
-    text = (<><b className="font-semibold">Race starts soon</b> · lights out in{" "}
-      <b className="num font-semibold">{countdown(next.start - now)}</b> · {where}</>);
+    tone = "bg-accent text-white";
+    text = (<><b className="font-semibold">Race starts soon.</b> Lights out in{" "}
+      <b className="num font-semibold">{countdown(next.start - now)}</b> at the {where}</>);
   } else if (next.start - now < 4 * 24 * HOUR) {
-    tone = "bg-surface-2 text-ink";
-    text = (<><b className="font-semibold text-accent-hot">Race weekend</b> · {SHORT[next.session]} in{" "}
-      <b className="num font-semibold">{countdown(next.start - now)}</b> · {where}</>);
+    tone = "bg-surface text-ink";
+    text = (<><b className="font-semibold">Race weekend:</b> {SHORT[next.session]} starts in{" "}
+      <b className="num font-semibold">{countdown(next.start - now)}</b> at the {where}</>);
   } else {
     const date = new Date(next.start).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" });
-    text = (<>Next up: <b className="font-semibold text-ink">{r.name}</b> · {r.location} · {SHORT[next.session]}{" "}
-      {date} <span className="text-ink-3">(in {countdown(next.start - now)})</span></>);
+    text = <>Next race: <b className="font-semibold text-ink">{where}</b>, {SHORT[next.session]} on {date}</>;
   }
   const inner = <span className="truncate">{text}</span>;
   return (

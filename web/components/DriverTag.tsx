@@ -8,7 +8,7 @@ export default function DriverTag({ code, d, showName = false, className = "" }:
   return (
     <span className={`inline-flex min-w-0 items-center gap-2 ${className}`}>
       <span aria-hidden className="h-4 w-1 shrink-0 rounded-full" style={{ background: d?.color ?? "#8a8d93" }} />
-      <span className="font-display text-[15px] font-bold italic tracking-wide">{code}</span>
+      <span className="wide text-[13px]">{code}</span>
       {showName && d && <span className="hidden truncate text-[13px] text-ink-2 sm:inline">{d.name}</span>}
     </span>
   );

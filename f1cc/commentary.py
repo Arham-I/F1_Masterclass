@@ -54,7 +54,7 @@ def session_notes(session: str, rows: pd.DataFrame, names: dict[str, str]) -> li
         return notes
     first, second = timed.iloc[0], timed.iloc[1]
     margin = float(second["gap_to_best_s"])
-    close = " - a tiny margin" if margin < 0.05 else ""
+    close = ", a tiny margin" if margin < 0.05 else ""
     if session == "Qualifying":
         notes.append(f"{_name(names, first['driver'])} takes pole with a {lap(first['best_lap_s'])}, "
                      f"{gap(margin)} faster than {_name(names, second['driver'])}{close}.")
@@ -120,7 +120,7 @@ def race_notes(df: pd.DataFrame, names: dict[str, str]) -> list[str]:
     winner = df.loc[df["actual"].idxmin()]
     fav = df.loc[df["expected_pos"].idxmin()]
     if winner["driver"] == fav["driver"]:
-        notes.append(f"{_name(names, winner['driver'])} won, as predicted - we gave them {pct(winner['p_win'])}.")
+        notes.append(f"{_name(names, winner['driver'])} won, as predicted: we gave them {pct(winner['p_win'])}.")
     else:
         notes.append(f"{_name(names, winner['driver'])} won. We had given them {pct(winner['p_win'])}; our predicted "
                      f"winner was {_name(names, fav['driver'])} ({pct(fav['p_win'])}).")

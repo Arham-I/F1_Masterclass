@@ -15,9 +15,10 @@ environment (`pip install -r requirements-dev.txt`).
 | Then | `python scripts/backtest.py` | Writes predictions for the live weekend (predicted, not scored) |
 | After Qualifying, once penalties are published | add the starting grid to `data/starting_grid.csv` (two sources; `tests/test_live.py` checks it) | FastF1 only has the grid with the race result; the app shows it next to the prediction |
 | After the race | `python scripts/backfill.py --years 2026` then `python scripts/backtest.py` | Adds the Race (and its on-track overtake count); the weekend is now scored and joins the season trend |
+| Then (after every backtest, live or finished) | `python scripts/export_site.py` | Refreshes the website's JSON in `web/` (calendar, replay files, race results, accuracy); offline once the backfill has run |
 | Then | `python -m pytest tests` | Leak, integrity and freshness tests must pass |
 | Then | add the race's Auto after-Q scores to the holdout table in `docs/evaluation.md` §6 | Frozen model: report, don't tune (see the freeze rules there) |
-| Then | commit `data/*.parquet`, push, reboot the Streamlit app (Manage app → Reboot) | The deployed app only reads the committed parquet |
+| Then | commit `data/*.parquet` and `web/data`, `web/public/data`, push; reboot the Streamlit app (Manage app → Reboot) | Both deployed front ends only read committed files; Vercel rebuilds the website on push |
 
 Traps:
 - **Pulling too early.** The backfill skips any (round, session) already stored, so a session

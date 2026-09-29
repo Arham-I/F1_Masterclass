@@ -23,35 +23,45 @@ export default function AccuracyPage() {
   return (
     <div className="space-y-10">
       <header>
-        <p className="eyebrow">Report card · {acc.year}</p>
-        <h1 className="display mt-2 text-5xl sm:text-6xl">How accurate <span className="text-accent">is it?</span></h1>
+        <h1 className="wide text-4xl sm:text-5xl">How accurate is it?</h1>
         <p className="mt-4 max-w-2xl text-[16px] leading-relaxed text-ink-2">
-          Every prediction on this site was made using only what was known at that moment - never the result - and
-          then checked against the real race. Here&apos;s the honest scorecard, including against the simplest possible
-          guess: <b className="text-ink">&ldquo;they&apos;ll finish in qualifying order.&rdquo;</b> In Formula 1 that is a tough benchmark to beat.
+          Every prediction on this site was made using only what was known at that moment, then checked against the
+          real race. Below is the full record, next to the simplest possible guess: <b className="text-ink">the cars
+          finish in qualifying order</b>. In Formula 1 that is a hard benchmark to beat.
         </p>
       </header>
 
-      <section aria-labelledby="afterq" className="space-y-3">
-        <h2 id="afterq" className="display text-3xl">After qualifying · {auto.races} races</h2>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {[
-            { k: "Winner picked", a: `${Math.round(auto.winner_hit * auto.races)} / ${auto.races}`, b: `${Math.round(base.winner_hit * base.races)} / ${base.races}`, tip: "How often our predicted winner actually won." },
-            { k: "Podium called", a: `${auto.podium_hits.toFixed(2)} / 3`, b: `${base.podium_hits.toFixed(2)} / 3`, tip: "On average, how many of the real top three we had in our predicted top three." },
-            { k: "Typical miss", a: `${auto.mae.toFixed(2)} places`, b: `${base.mae.toFixed(2)} places`, tip: "Average gap between each driver's predicted and actual finishing place. Lower is better." },
-            { k: "Order score", a: auto.spearman.toFixed(3), b: base.spearman.toFixed(3), tip: "How closely the whole predicted order matched the real one (Spearman rank correlation). 1 = perfect, 0 = random." },
-          ].map((c) => (
-            <div key={c.k} className="card p-5">
-              <p className="eyebrow">{c.k}<InfoTip label={c.k}>{c.tip}</InfoTip></p>
-              <p className="display mt-2 text-4xl">{c.a}</p>
-              <p className="mt-1 text-sm text-ink-3">Qualifying-order rule: <span className="num text-ink-2">{c.b}</span></p>
-            </div>
-          ))}
+      <section aria-labelledby="afterq">
+        <h2 id="afterq" className="wide text-2xl">After qualifying, {auto.races} races</h2>
+        <div className="scroll-x mt-3">
+          <table className="w-full min-w-[520px] text-[15px]">
+            <thead className="border-b border-line text-left text-sm text-ink-2">
+              <tr>
+                <th scope="col" className="py-2 pr-4 font-normal">Measure</th>
+                <th scope="col" className="py-2 pr-4 text-right font-semibold text-ink">Our prediction</th>
+                <th scope="col" className="py-2 text-right font-normal">Qualifying order</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[
+                { k: "Winner picked", a: `${Math.round(auto.winner_hit * auto.races)} of ${auto.races}`, b: `${Math.round(base.winner_hit * base.races)} of ${base.races}`, tip: "How often our predicted winner actually won." },
+                { k: "Podium finishers named", a: `${auto.podium_hits.toFixed(2)} of 3`, b: `${base.podium_hits.toFixed(2)} of 3`, tip: "On average, how many of the real top three were in our predicted top three." },
+                { k: "Typical miss", a: `${auto.mae.toFixed(2)} places`, b: `${base.mae.toFixed(2)} places`, tip: "Average gap between each driver's predicted and actual finishing place. Lower is better." },
+                { k: "Order score", a: auto.spearman.toFixed(3), b: base.spearman.toFixed(3), tip: "How closely the whole predicted order matched the real one (Spearman rank correlation). 1 is perfect, 0 is no better than random." },
+              ].map((c) => (
+                <tr key={c.k} className="border-b border-line">
+                  <th scope="row" className="py-3 pr-4 text-left font-normal text-ink-2">{c.k}<InfoTip label={c.k}>{c.tip}</InfoTip></th>
+                  <td className="wide num py-3 pr-4 text-right text-xl">{c.a}</td>
+                  <td className="num py-3 text-right text-ink-2">{c.b}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </section>
 
-      <section className="card p-5" aria-labelledby="through">
-        <h2 id="through" className="display text-3xl">Sharper as the weekend goes on</h2>
+      <section className="panel p-5" aria-labelledby="through">
+        <h2 id="through" className="wide text-2xl">Sharper as the weekend goes on</h2>
         <p className="mt-1 text-sm text-ink-2">Order score (higher is better) of the prediction made after each session, averaged over the season.</p>
         <svg viewBox={`0 0 ${W} ${H}`} className="mt-4 w-full max-w-3xl" role="img"
           aria-label={`Order score by stage: ${STAGES.map((s, k) => `${s} ${get(k + 1, acc.auto).spearman.toFixed(2)}`).join(", ")}`}>
@@ -66,7 +76,7 @@ export default function AccuracyPage() {
           ))}
           {[acc.baseline, acc.auto].map((p) => {
             const pts = [1, 2, 3, 4].map((k) => get(k, p).spearman);
-            const c = p === acc.auto ? "var(--accent)" : "var(--ink-3)";
+            const c = p === acc.auto ? "var(--ink)" : "var(--ink-3)";
             return (
               <g key={p}>
                 <polyline points={pts.map((v, k) => `${x(k + 1)},${y(v)}`).join(" ")} fill="none" stroke={c} strokeWidth="3" strokeDasharray={p === acc.auto ? undefined : "6 5"} />
@@ -81,23 +91,23 @@ export default function AccuracyPage() {
           })}
         </svg>
         <div className="mt-2 flex gap-5 text-xs text-ink-2">
-          <span className="inline-flex items-center gap-2"><span className="h-0.5 w-6 bg-accent" />Our prediction (Auto)</span>
+          <span className="inline-flex items-center gap-2"><span className="h-0.5 w-6 bg-ink" />Our prediction (Auto)</span>
           <span className="inline-flex items-center gap-2"><span className="h-0.5 w-6 border-t-2 border-dashed border-ink-3" />Simple rule</span>
         </div>
       </section>
 
       <section aria-labelledby="byrace">
-        <h2 id="byrace" className="display text-3xl">Race by race</h2>
+        <h2 id="byrace" className="wide text-2xl">Race by race</h2>
         <p className="mt-1 text-sm text-ink-2">Our prediction after qualifying, checked against each result.</p>
-        <div className="scroll-x mt-3 rounded-xl border border-line">
+        <div className="scroll-x mt-3 rounded-md border border-line">
           <table className="w-full min-w-[560px] text-sm">
-            <thead className="bg-surface-2 text-left text-[11px] uppercase tracking-wider text-ink-3">
+            <thead className="bg-surface text-left text-sm text-ink-2">
               <tr>
-                <th scope="col" className="px-3 py-2">Round</th>
-                <th scope="col" className="px-3 py-2">Winner picked</th>
-                <th scope="col" className="px-3 py-2 text-right">Podium</th>
-                <th scope="col" className="px-3 py-2 text-right">Typical miss</th>
-                <th scope="col" className="px-3 py-2 text-right">Order score</th>
+                <th scope="col" className="px-3 py-2 font-normal">Round</th>
+                <th scope="col" className="px-3 py-2 font-normal">Winner picked</th>
+                <th scope="col" className="px-3 py-2 text-right font-normal">Podium</th>
+                <th scope="col" className="px-3 py-2 text-right font-normal">Typical miss</th>
+                <th scope="col" className="px-3 py-2 text-right font-normal">Order score</th>
               </tr>
             </thead>
             <tbody>
@@ -106,10 +116,10 @@ export default function AccuracyPage() {
                 return (
                   <tr key={r.round} className="border-t border-line/70">
                     <td className="px-3 py-2">
-                      <Link href={`/weekend/${slug(acc.year, r.round)}/?step=race`} className="hover:text-accent-hot">
+                      <Link href={`/weekend/${slug(acc.year, r.round)}/?step=race`} className="hover:underline">
                         <span className="num text-ink-3">R{r.round}</span> {meta?.name.replace(" Grand Prix", " GP")}
                       </Link>
-                      {r.round >= acc.holdout_from && <span className="ml-2 rounded bg-good/15 px-1.5 py-0.5 text-[10px] font-bold uppercase text-good">unseen test</span>}
+                      {r.round >= acc.holdout_from && <span className="ml-2 rounded-sm bg-good/15 px-1.5 py-0.5 text-[11px] font-semibold text-good">Unseen test</span>}
                     </td>
                     <td className={`px-3 py-2 ${r.winner_hit ? "text-good" : "text-ink-3"}`}>{r.winner_hit ? "✓ Yes" : "✗ No"}</td>
                     <td className="num px-3 py-2 text-right">{Math.round(r.podium_hits)} / 3</td>
@@ -125,17 +135,17 @@ export default function AccuracyPage() {
 
       <section aria-labelledby="models" className="grid gap-6 lg:grid-cols-[1.3fr_1fr]">
         <div>
-          <h2 id="models" className="display text-3xl">The models, compared</h2>
+          <h2 id="models" className="wide text-2xl">The models compared</h2>
           <p className="mt-1 text-sm text-ink-2">After qualifying, averaged over the season. &ldquo;Auto&rdquo; switches to whichever model has the best record so far.</p>
-          <div className="scroll-x mt-3 rounded-xl border border-line">
+          <div className="scroll-x mt-3 rounded-md border border-line">
             <table className="w-full min-w-[520px] text-sm">
-              <thead className="bg-surface-2 text-left text-[11px] uppercase tracking-wider text-ink-3">
+              <thead className="bg-surface text-left text-sm text-ink-2">
                 <tr>
-                  <th scope="col" className="px-3 py-2">Model</th>
-                  <th scope="col" className="px-3 py-2 text-right">Winners</th>
-                  <th scope="col" className="px-3 py-2 text-right">Podium</th>
-                  <th scope="col" className="px-3 py-2 text-right">Miss</th>
-                  <th scope="col" className="px-3 py-2 text-right">Order</th>
+                  <th scope="col" className="px-3 py-2 font-normal">Model</th>
+                  <th scope="col" className="px-3 py-2 text-right font-normal">Winners</th>
+                  <th scope="col" className="px-3 py-2 text-right font-normal">Podium</th>
+                  <th scope="col" className="px-3 py-2 text-right font-normal">Miss</th>
+                  <th scope="col" className="px-3 py-2 text-right font-normal">Order</th>
                 </tr>
               </thead>
               <tbody>
@@ -157,11 +167,11 @@ export default function AccuracyPage() {
             </table>
           </div>
         </div>
-        <aside className="card h-fit p-5">
-          <p className="eyebrow">Playing fair</p>
+        <aside className="panel h-fit p-5">
+          <h2 className="wide text-lg">Playing fair</h2>
           <ul className="mt-3 space-y-3 text-sm leading-relaxed text-ink-2">
             <li><b className="text-ink">No peeking.</b> Each prediction uses only the sessions before it and the results of earlier races.</li>
-            <li><b className="text-ink">Frozen model.</b> The model was locked after round {acc.holdout_from - 1}. From round {acc.holdout_from} on, every race is a genuine test it has never seen - marked <span className="text-good">unseen test</span> above.</li>
+            <li><b className="text-ink">Frozen model.</b> The model was locked after round {acc.holdout_from - 1}. From round {acc.holdout_from} on, every race is a genuine test it has never seen - marked <span className="text-good">Unseen test</span> above.</li>
             <li><b className="text-ink">Still learning, by fixed rules.</b> After each race the new result is added to the training data automatically; the recipe itself doesn&apos;t change.</li>
             <li><b className="text-ink">Small numbers.</b> With {auto.races} races so far, one or two surprises can move these figures noticeably.</li>
           </ul>

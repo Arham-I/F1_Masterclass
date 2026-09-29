@@ -1,36 +1,35 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Race Weekend Companion: website
 
-## Getting Started
+Static Next.js site (deployed on Vercel) that replays each 2026 weekend session by session. It shows
+only data the Python pipeline already computed; nothing runs on a server.
 
-First, run the development server:
+## Update the data after a session or race
+
+From the repo root:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+python scripts/backfill.py --years 2026 [--in-progress]   # new sessions from FastF1
+python scripts/backtest.py                                # predictions + scores
+python scripts/export_site.py                             # JSON for this site
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+`export_site.py` writes `web/data/` (read at build time) and `web/public/data/race/` (race results,
+fetched only when a viewer reveals the race). Commit and push; Vercel rebuilds automatically.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Develop
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+cd web
+npm install
+npm run dev        # http://localhost:3000
+npm run build      # static export in out/
+```
 
-## Learn More
+## Deploy on Vercel (one-time)
 
-To learn more about Next.js, take a look at the following resources:
+Import the GitHub repo in Vercel and set **Root Directory** to `web`. The framework preset
+(Next.js) and build command are detected automatically. Security headers live in `vercel.json`.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Design
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+See [DESIGN.md](DESIGN.md) for the colour, type and layout decisions.

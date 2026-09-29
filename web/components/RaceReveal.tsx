@@ -23,8 +23,8 @@ export default function RaceReveal({ weekend, slug, model, rowsFor }: {
     return () => { alive = false; };
   }, [slug]);
 
-  if (error) return <p className="card p-5 text-sm text-ink-2">The race result could not be loaded. Try again later.</p>;
-  if (!race) return <div className="card h-64 animate-pulse" aria-busy="true" aria-label="Loading race result" />;
+  if (error) return <p className="panel p-5 text-sm text-ink-2">The race result didn&apos;t load. Check your connection and select Lights out again.</p>;
+  if (!race) return <div className="panel h-64 animate-pulse" aria-busy="true" aria-label="Loading race result" />;
 
   const drivers: Drivers = weekend.drivers;
   const { rows, used } = rowsFor(stage, model);
@@ -36,19 +36,13 @@ export default function RaceReveal({ weekend, slug, model, rowsFor }: {
   const x = (p: number) => ((p - 0.5) / n) * 100;
 
   return (
-    <section className="rise space-y-5" aria-labelledby="race-title">
-      <div className="card overflow-hidden">
-        <div className="checker h-2 opacity-80" aria-hidden />
-        <div className="p-5">
-          <p className="eyebrow">Race result</p>
-          <h2 id="race-title" className="display mt-1 text-4xl sm:text-5xl">
-            {drivers[winner.driver]?.name ?? winner.driver} <span className="text-accent">wins</span>
-          </h2>
-          <ul className="mt-3 space-y-1 text-[15px] leading-relaxed text-ink-2">
-            {race.commentary.map((c) => <li key={c}>{c}</li>)}
-          </ul>
-          <p className="mt-2 text-xs text-ink-3">Commentary compares the result with the Auto prediction made after Qualifying.</p>
-        </div>
+    <section className="space-y-6" aria-labelledby="race-title">
+      <div>
+        <h2 id="race-title" className="wide text-4xl sm:text-5xl">{drivers[winner.driver]?.name ?? winner.driver} wins</h2>
+        <ul className="mt-4 max-w-3xl space-y-1.5 text-[16px] leading-relaxed text-ink-2">
+          {race.commentary.map((c) => <li key={c}>{c}</li>)}
+        </ul>
+        <p className="mt-2 text-xs text-ink-3">These notes compare the result with the Auto prediction made after qualifying.</p>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -56,7 +50,7 @@ export default function RaceReveal({ weekend, slug, model, rowsFor }: {
         <div className="flex flex-wrap gap-1" role="radiogroup" aria-label="Prediction made after">
           {weekend.steps.map((s) => (
             <button key={s.stage} type="button" role="radio" aria-checked={stage === s.stage} onClick={() => setStage(s.stage)}
-              className={`rounded-full px-3 py-1 text-sm ${stage === s.stage ? "bg-ink text-bg" : "bg-surface-2 text-ink-2 hover:text-ink"}`}>
+              className={`rounded px-3 py-1 text-sm ${stage === s.stage ? "bg-ink font-semibold text-bg" : "bg-surface-2 text-ink-2 hover:text-ink"}`}>
               {s.short}
             </button>
           ))}
@@ -64,19 +58,19 @@ export default function RaceReveal({ weekend, slug, model, rowsFor }: {
       </div>
 
       {score && (
-        <dl className="grid grid-cols-2 gap-3 md:grid-cols-4">
-          <Stat k="Winner" v={winner.driver} sub={`we gave ${pct(pred.get(winner.driver)?.p_win)}`} good={score.winner_hit === 1}
+        <dl className="grid grid-cols-2 divide-line border-y border-line md:grid-cols-4 md:divide-x">
+          <Stat k="Winner" v={winner.driver} sub={`${score.winner_hit === 1 ? "Predicted. " : ""}We gave ${pct(pred.get(winner.driver)?.p_win)}`} good={score.winner_hit === 1}
             tip="Did our predicted winner (P1) actually win?" />
           <Stat k="Podium called" v={`${score.podium_hits} of 3`} good={score.podium_hits >= 2} tip="How many of the real top 3 were in our predicted top 3." />
           <Stat k="Typical miss" v={`${score.mae.toFixed(1)} places`} tip="Average distance between each driver's predicted and actual finishing position." />
           <Stat k="Order score" v={score.spearman.toFixed(2)} sub="1 = perfect order" tip="How closely the whole predicted order matched the real one (rank correlation): 1 is perfect, 0 is no better than random." />
         </dl>
       )}
-      <p className="text-xs text-ink-3">Model: {modelLabel(used)}</p>
+      <p className="text-xs text-ink-3">Model used: {modelLabel(used)}</p>
 
-      <div className="card p-4 sm:p-5">
+      <div className="panel p-4 sm:p-5">
         <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-ink-2">
-          <h3 className="display mr-auto text-xl text-ink">Predicted vs actual</h3>
+          <h3 className="wide mr-auto text-xl text-ink">Predicted against actual</h3>
           <span className="inline-flex items-center gap-1.5"><span className="h-3 w-3 rounded-full border-2 border-ink-2" />predicted</span>
           <span className="inline-flex items-center gap-1.5"><span className="h-3 w-3 rounded-full bg-ink-2" />actual</span>
         </div>
@@ -88,21 +82,21 @@ export default function RaceReveal({ weekend, slug, model, rowsFor }: {
             const [a, b] = [Math.min(p.pos, r.pos), Math.max(p.pos, r.pos)];
             return (
               <li key={r.driver} className="grid h-9 grid-cols-[2rem_4.8rem_1fr_3.5rem] items-center gap-2 border-b border-line/50 text-sm sm:grid-cols-[2rem_11rem_1fr_6rem]">
-                <span className="num text-right font-display text-lg font-bold italic">{r.finished ? r.pos : "DNF"}</span>
+                <span className="wide num text-right text-base">{r.finished ? r.pos : "DNF"}</span>
                 <DriverTag code={r.driver} d={drivers[r.driver]} showName />
                 <span className="relative h-full" aria-label={`predicted P${p.pos}, finished ${r.finished ? `P${r.pos}` : "did not finish"}`}>
                   <span className="absolute top-1/2 h-0.5 -translate-y-1/2 bg-line" style={{ left: `${x(a + 0.5)}%`, width: `${x(b + 0.5) - x(a + 0.5)}%` }} />
                   <span className="absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 bg-bg" style={{ left: `${x(p.pos + 0.5)}%`, borderColor: c }} />
                   <span className="absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full" style={{ left: `${x(r.pos + 0.5)}%`, background: r.finished ? c : "var(--ink-3)" }} />
                 </span>
-                <span className={`num text-right text-[13px] ${!r.finished ? "text-ink-3" : delta > 0 ? "text-good" : delta < 0 ? "text-bad" : "text-ink-3"}`}>
+                <span className={`num text-right text-[13px] ${!r.finished ? "text-ink-3" : delta > 0 ? "text-good" : delta < 0 ? "text-ink-2" : "text-ink-3"}`}>
                   {!r.finished ? r.status : delta === 0 ? "spot on" : `${delta > 0 ? "▲" : "▼"}${Math.abs(delta)} vs P${p.pos}`}
                 </span>
               </li>
             );
           })}
         </ul>
-        <p className="mt-3 text-xs text-ink-3">▲ = finished higher than predicted. Retired cars are listed in their classified position.</p>
+        <p className="mt-3 text-xs text-ink-3">Green ▲ means the driver finished higher than predicted. Retired cars are listed in their classified position.</p>
       </div>
     </section>
   );
@@ -110,10 +104,10 @@ export default function RaceReveal({ weekend, slug, model, rowsFor }: {
 
 function Stat({ k, v, sub, tip, good }: { k: string; v: string; sub?: string; tip: string; good?: boolean }) {
   return (
-    <div className="card p-4">
-      <dt className="eyebrow">{k}<InfoTip label={k}>{tip}</InfoTip></dt>
-      <dd className={`display mt-1 text-3xl ${good === true ? "text-good" : ""}`}>{v}</dd>
-      {sub && <dd className="text-xs text-ink-3">{sub}</dd>}
+    <div className="px-1 py-4 md:px-5">
+      <dt className="text-sm text-ink-2">{k}<InfoTip label={k}>{tip}</InfoTip></dt>
+      <dd className={`wide num mt-1 text-2xl ${good === true ? "text-good" : ""}`}>{v}</dd>
+      {sub && <dd className="text-xs text-ink-2">{sub}</dd>}
     </div>
   );
 }

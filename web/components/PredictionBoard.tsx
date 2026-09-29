@@ -15,7 +15,7 @@ function Change({ now, before }: { now: number; before?: number }) {
   const d = before - now;
   if (d === 0) return <span className="w-7 text-center text-[11px] text-ink-3" aria-label="no change">–</span>;
   return (
-    <span className={`num w-7 text-center text-[11px] font-semibold ${d > 0 ? "text-good" : "text-bad"}`}
+    <span className={`num w-7 text-center text-[11px] font-semibold ${d > 0 ? "text-good" : "text-ink-3"}`}
       aria-label={d > 0 ? `up ${d}` : `down ${-d}`}>
       {d > 0 ? "▲" : "▼"}{Math.abs(d)}
     </span>
@@ -40,8 +40,8 @@ function Bar({ p, color }: { p: number; color: string }) {
   return (
     <span className="flex items-center justify-end gap-2">
       <span className="num text-[13px]">{pct(p)}</span>
-      <span className="hidden h-1.5 w-10 overflow-hidden rounded-full bg-surface-3 lg:block" aria-hidden>
-        <span className="grow block h-full rounded-full" style={{ width: `${p * 100}%`, background: color }} />
+      <span className="hidden h-1.5 w-10 overflow-hidden rounded-sm bg-surface-3 lg:block" aria-hidden>
+        <span className="grow block h-full" style={{ width: `${p * 100}%`, background: color }} />
       </span>
     </span>
   );
@@ -60,12 +60,12 @@ export default function PredictionBoard({ rows, prev, step, drivers }: {
     + (showGrid ? " lg:grid-cols-[2rem_1.75rem_minmax(9rem,1.1fr)_minmax(7rem,1fr)_6.5rem_6.5rem_4.6rem_4.6rem_3.2rem_3.2rem]" : " lg:grid-cols-[2rem_1.75rem_minmax(9rem,1.1fr)_minmax(7rem,1fr)_6.5rem_6.5rem_4.6rem_4.6rem_3.2rem]");
   return (
     <div>
-      <div className={`grid ${cols} items-end gap-2 border-b border-line pb-2 text-[11px] font-semibold uppercase tracking-wider text-ink-3`}>
-        <span className="text-right">Pos</span>
+      <div className={`grid ${cols} items-end gap-2 border-b border-line pb-2 text-xs font-semibold text-ink-2`}>
+        <span className="text-right">Pos.</span>
         <span />
         <span>Driver</span>
         <span className="hidden md:block">Likely finish
-          <InfoTip label="Likely finish">The dot is our predicted finishing position. The bar covers the places the driver finishes in 8 out of 10 simulated races - a short bar means we are confident.</InfoTip>
+          <InfoTip label="Likely finish">The dot is our predicted finishing position. The bar covers the places the driver finishes in 8 out of 10 simulated races; a short bar means we are confident.</InfoTip>
         </span>
         <span className="text-right">Win<InfoTip label="Win chance" align="right">Share of 20,000 simulated races this driver won. The simulation adds realistic randomness: mistakes, strategy, and retirements.</InfoTip></span>
         <span className="text-right">Podium<InfoTip label="Podium chance" align="right">Chance of finishing in the top 3.</InfoTip></span>
@@ -90,7 +90,7 @@ export default function PredictionBoard({ rows, prev, step, drivers }: {
               className={`grid h-full w-full ${cols} items-center gap-2 border-b border-line/60 text-left text-sm transition-colors hover:bg-surface-2`}
               aria-label={`${d?.name ?? r.driver}: predicted P${r.pos}, ${pct(r.p_win)} to win. Show details`}
             >
-              <span className={`num text-right font-display text-lg font-bold italic ${r.pos <= 3 ? "text-ink" : "text-ink-2"}`}>{r.pos}</span>
+              <span className={`wide num text-right text-base ${r.pos <= 3 ? "text-ink" : "text-ink-2"}`}>{r.pos}</span>
               <Change now={r.pos} before={before.get(r.driver)} />
               <span className="min-w-0">
                 <DriverTag code={r.driver} d={d} showName />
@@ -112,7 +112,7 @@ export default function PredictionBoard({ rows, prev, step, drivers }: {
       />
       {showGrid && step.grid.some((g) => g.penalty) && (
         <p className="mt-2 text-xs text-ink-3">
-          * Grid penalty: {step.grid.filter((g) => g.penalty).map((g) => `${g.driver} ${g.penalty}`).join(" · ")}
+          * Grid penalty: {step.grid.filter((g) => g.penalty).map((g) => `${g.driver} ${g.penalty}`).join("; ")}
         </p>
       )}
       <DriverDialog row={open} driver={open ? drivers[open.driver] : undefined} onClose={() => setOpen(null)} session={step.session} />
