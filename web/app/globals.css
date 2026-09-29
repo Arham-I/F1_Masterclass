@@ -1,0 +1,139 @@
+@import "tailwindcss";
+
+/* ---- design tokens ------------------------------------------------------------------ */
+:root {
+  --bg: #09090c;
+  --surface: #121217;
+  --surface-2: #1a1a21;
+  --surface-3: #23232c;
+  --line: #2a2a34;
+  --ink: #f3f3f6;
+  --ink-2: #b0b0bc;
+  --ink-3: #7c7c89;
+  --accent: #e10600;
+  --accent-hot: #ff3b2f;
+  --good: #2bd576;
+  --bad: #ff5a4f;
+  --warn: #ffb020;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-line: var(--line);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-accent: var(--accent);
+  --color-accent-hot: var(--accent-hot);
+  --color-good: var(--good);
+  --color-bad: var(--bad);
+  --color-warn: var(--warn);
+  --font-sans: var(--font-body), system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display: var(--font-display-face), var(--font-body), system-ui, sans-serif;
+}
+
+html {
+  background: var(--bg);
+}
+
+body {
+  background:
+    radial-gradient(1200px 500px at 85% -120px, rgba(225, 6, 0, 0.14), transparent 60%),
+    var(--bg);
+  color: var(--ink);
+  font-feature-settings: "tnum" 1, "cv11" 1;
+}
+
+/* Display type: condensed, italic, uppercase - the speed look. */
+.display {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.01em;
+  line-height: 0.95;
+}
+
+.eyebrow {
+  font-family: var(--font-display);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 0.72rem;
+  color: var(--ink-3);
+}
+
+.card {
+  background: linear-gradient(180deg, var(--surface-2), var(--surface));
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+
+/* Racing stripe accent used on headings and the active timeline step. */
+.stripe {
+  background: repeating-linear-gradient(-60deg, var(--accent) 0 6px, transparent 6px 10px);
+}
+
+.checker {
+  background-image: conic-gradient(#fff 25%, transparent 0 50%, #fff 0 75%, transparent 0);
+  background-size: 10px 10px;
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent-hot);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* Rows / bars glide into place when a session is revealed. */
+.glide {
+  transition: transform 650ms cubic-bezier(0.22, 1, 0.36, 1), opacity 400ms ease;
+}
+.grow {
+  transition: width 650ms cubic-bezier(0.22, 1, 0.36, 1), left 650ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+.rise {
+  animation: rise 450ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+.live-dot {
+  animation: pulse-dot 1.4s ease-in-out infinite;
+}
+
+@keyframes fill {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+.autoplay-fill {
+  transform-origin: left;
+  animation: fill var(--autoplay-ms, 6000ms) linear both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .glide, .grow { transition: none; }
+  .rise, .live-dot, .autoplay-fill { animation: none; }
+}
+
+/* Thin, dark scrollbars for horizontal chart overflow on phones. */
+.scroll-x {
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
+}
