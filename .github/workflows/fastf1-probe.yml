@@ -1,9 +1,14 @@
 # Does FastF1 work from GitHub's runners at all?
 #
-# The F1 timing endpoint is not a supported public API, and CI address ranges are sometimes
-# rate-limited or blocked. Run this once by hand before trusting a scheduled updater; it reports
-# the HTTP status of each upstream FastF1 depends on, then tries a real session load. It writes
-# nothing.
+# ANSWER (checked 2026-09-29, run 36537370429): NO.
+#   HTTP 403  livetiming.formula1.com   <- the lap/timing feed FastF1 needs for everything here
+#   HTTP 200  api.jolpi.ca (Ergast)     <- classifications only, not lap-level timing
+#   HTTP 200  www.formula1.com
+# F1 blocks datacenter address ranges, so no cloud CI can pull session data and the scheduled
+# updates have to run somewhere with a residential IP (see docs/season-checklist.md).
+#
+# Kept so the finding can be re-checked rather than re-argued: run it by hand if F1 ever opens the
+# feed up. It writes nothing.
 name: FastF1 probe
 
 on:

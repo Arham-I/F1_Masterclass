@@ -35,8 +35,11 @@ Two things to know before relying on it:
 
 - **The machine has to be awake.** A laptop asleep through qualifying runs nothing, and cron does
   not catch up on missed runs — though the next run that *does* fire pulls everything still
-  outstanding, so a missed tick only delays the update. For unattended running, a scheduled
-  GitHub Action (which also has the repo's push rights) is the robust option.
+  outstanding, so a missed tick only delays the update.
+  **Cloud CI is not an alternative:** F1 blocks datacenter IPs from `livetiming.formula1.com`
+  (403), so a GitHub Action cannot pull session data at all — checked 2026-09-29, and
+  `.github/workflows/fastf1-probe.yml` re-checks it in a minute if that ever changes. Anything
+  running the pull needs a residential connection.
 - **`--push` commits and pushes on its own.** Start without it for a weekend and check what lands
   in `git status` before letting it publish.
 
