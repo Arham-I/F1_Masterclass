@@ -132,7 +132,9 @@ export default function Replay({ weekend, slug }: { weekend: Weekend; slug: stri
           <section className="panel cut cut-edge p-4 sm:p-5" aria-labelledby="pred-title">
             <div className="mb-4 flex flex-wrap items-end gap-3">
               <div className="mr-auto">
-                <h2 id="pred-title" className="h2">Predicted finishing order</h2>
+                {/* Always the race, whichever session it was made after - the models only ever
+                    predict Sunday, never the session in view. */}
+                <h2 id="pred-title" className="h2">Predicted race finishing order</h2>
                 <p className="mt-1 text-sm text-ink-2">
                   {weekend.live ? <span className="text-warn">Live forecast: the race hasn&apos;t been run yet. </span> : null}
                   Made after {step.session}, using only what was known then. Select a driver for the full picture.
