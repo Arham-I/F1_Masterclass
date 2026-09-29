@@ -26,7 +26,7 @@ export default function SeasonGrid({ rounds, drivers, year }: { rounds: RoundSum
   return (
     <section aria-labelledby="calendar-title">
       <div className="mb-3 flex flex-wrap items-end gap-3">
-        <h2 id="calendar-title" className="wide mr-auto text-2xl">{year} calendar</h2>
+        <h2 id="calendar-title" className="mr-auto h2">{year} calendar</h2>
         <button type="button" role="switch" aria-checked={show} onClick={toggle}
           className="inline-flex items-center gap-2 rounded px-2 py-1.5 text-sm text-ink-2 hover:bg-surface-2 hover:text-ink">
           <span className={`relative h-4 w-7 rounded-full transition-colors ${show ? "bg-ink" : "bg-surface-3"}`}>
@@ -59,7 +59,7 @@ export default function SeasonGrid({ rounds, drivers, year }: { rounds: RoundSum
                       </span>
                     )}
                   </>
-                ) : <span className="text-ink-3">Result hidden</span>)}
+                ) : null)}
                 {r.status === "live" && <span className="inline-flex items-center gap-1.5 font-semibold text-accent-hot"><span className="live-dot h-2 w-2 rounded-full bg-accent" />Live weekend</span>}
               </span>
               <span className={`w-20 shrink-0 text-right text-sm font-semibold ${playable ? "text-ink group-hover:underline" : "text-ink-3"}`}>

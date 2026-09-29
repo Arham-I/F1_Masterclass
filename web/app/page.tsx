@@ -16,7 +16,7 @@ export default function Home() {
     <div className="space-y-12">
       <section className="grid items-start gap-8 lg:grid-cols-[1.5fr_1fr]">
         <div className="pt-2">
-          <h1 className="wide max-w-2xl text-4xl sm:text-6xl">Relive every {season.year} race weekend, one session at a time.</h1>
+          <h1 className="wide max-w-2xl text-4xl sm:text-[3.0625rem]">Relive every {season.year} weekend, session by session.</h1>
           <p className="mt-5 max-w-xl text-[17px] leading-relaxed text-ink-2">
             Step from first practice to qualifying and watch the race prediction change after every session, using
             only what was known at that point. Then turn the lights out and see how it really finished.
@@ -34,7 +34,7 @@ export default function Home() {
         <NextRace rounds={season.rounds} year={season.year} />
       </section>
 
-      <p className="max-w-3xl border-l-2 border-good pl-4 text-[15px] leading-relaxed text-ink-2">
+      <p className="max-w-3xl text-[16px] leading-relaxed text-ink-2">
         So far this season, predicting after qualifying, our pick has won <b className="text-ink">{wins} of {afterQ.races}</b> races
         and we&apos;ve named <b className="text-ink">{afterQ.podium_hits.toFixed(1)} of the 3</b> podium finishers on average.
         A typical driver finishes <b className="text-ink">{afterQ.mae.toFixed(1)} places</b> from our prediction; simply

@@ -35,7 +35,7 @@ export default function Gantry({ steps, i, race, live, playing, autoplayMs, onGo
               className={`relative flex w-full flex-col items-center gap-1.5 overflow-hidden rounded px-1 pb-1.5 pt-2 text-[12px] sm:text-[13px] ${
                 current ? "bg-surface-2 font-semibold text-ink" : k <= i || race ? "text-ink-2 hover:bg-surface" : "text-ink-3 hover:bg-surface hover:text-ink-2"}`}>
               {lamps(k)}
-              <span className="truncate">{s.short}</span>
+              <span className="truncate"><span className="sm:hidden">{s.short === "Sprint Quali" ? "SQ" : s.short}</span><span className="hidden sm:inline">{s.short}</span></span>
               {current && <span className="absolute inset-x-2 bottom-0 h-0.5 bg-ink" aria-hidden />}
               {playing && k === i + 1 && (
                 <span key={i} className="autoplay-fill absolute inset-x-0 bottom-0 h-0.5 bg-accent" aria-hidden
@@ -54,10 +54,11 @@ export default function Gantry({ steps, i, race, live, playing, autoplayMs, onGo
         ) : (
           <button type="button" onClick={onReveal} disabled={i < last && !race} aria-current={race ? "step" : undefined}
             title={i < last && !race ? "Finish the replay to reveal the race" : "Reveal the race result"}
+            aria-label={race ? "Race result" : "Lights out: reveal the race result"}
             className={`relative flex w-full flex-col items-center gap-1.5 rounded px-1 pb-1.5 pt-2 text-[12px] sm:text-[13px] ${
               race ? "bg-surface-2 font-semibold text-ink" : i >= last ? "font-semibold text-ink ring-1 ring-accent hover:bg-surface" : "text-ink-3 opacity-60"}`}>
             {lamps(steps.length)}
-            <span className="truncate">{race ? "Race" : "Lights out"}</span>
+            <span className="truncate"><span className="sm:hidden">Race</span><span className="hidden sm:inline">{race ? "Race" : "Lights out"}</span></span>
             {race && <span className="absolute inset-x-2 bottom-0 h-0.5 bg-ink" aria-hidden />}
           </button>
         )}

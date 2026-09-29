@@ -54,6 +54,20 @@ body {
   line-height: 1.02;
 }
 
+/* Type scale, major third on 16px: 13 / 16 / 20 / 25 / 31 / 49. The wide face is reserved for page
+   titles and on-screen-graphics elements (positions, driver codes, the winner line). */
+.h2 {
+  font-size: 1.5625rem;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+.h3 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
 .label {
   font-size: 0.8125rem;
   color: var(--ink-2);

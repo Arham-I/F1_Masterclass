@@ -115,11 +115,11 @@ export default function Replay({ weekend, slug }: { weekend: Weekend; slug: stri
       ) : !step ? (
         <Intro weekend={weekend} onStart={() => go(0)} onPlay={() => setPlaying(true)} />
       ) : (
-        <div className="space-y-6">
-          <section className="grid gap-4 lg:grid-cols-[1.1fr_1fr]" aria-label={`After ${step.session}`}>
+        <div className="space-y-10">
+          <section className="grid gap-x-10 gap-y-8 lg:grid-cols-[1.1fr_1fr]" aria-label={`After ${step.session}`}>
             <RaceControl steps={steps.slice(0, i + 1)} />
-            <div className="panel p-5">
-              <h2 className="wide text-lg">Who can win
+            <div className="border-t border-line pt-4">
+              <h2 className="h3">Who can win
                 <InfoTip label="Who can win">The four drivers most likely to win right now, and how their chances moved after each session. Underneath: how far off a typical prediction is at each point. It shrinks as the weekend reveals more.</InfoTip>
               </h2>
               <div className="mt-3">
@@ -131,7 +131,7 @@ export default function Replay({ weekend, slug }: { weekend: Weekend; slug: stri
           <section className="panel p-4 sm:p-5" aria-labelledby="pred-title">
             <div className="mb-4 flex flex-wrap items-end gap-3">
               <div className="mr-auto">
-                <h2 id="pred-title" className="wide text-2xl">Predicted finishing order</h2>
+                <h2 id="pred-title" className="h2">Predicted finishing order</h2>
                 <p className="mt-1 text-sm text-ink-2">
                   {weekend.live ? <span className="text-warn">Live forecast: the race hasn&apos;t been run yet. </span> : null}
                   Made after {step.session}, using only what was known then. Select a driver for the full picture.
@@ -154,9 +154,9 @@ export default function Replay({ weekend, slug }: { weekend: Weekend; slug: stri
             <PredictionBoard rows={now!.rows} prev={prev} step={step} drivers={weekend.drivers} />
           </section>
 
-          <section className="panel p-4 sm:p-5" aria-labelledby="session-title">
+          <section className="border-t border-line pt-5" aria-labelledby="session-title">
             <div className="mb-3 flex flex-wrap items-end gap-3">
-              <h2 id="session-title" className="wide mr-auto text-2xl">{step.session}</h2>
+              <h2 id="session-title" className="mr-auto h2">{step.session}</h2>
               <div className="flex gap-1 rounded-md bg-surface-2 p-1" role="tablist" aria-label="Session charts">
                 {([["timesheet", step.kind === "sprint" ? "Result" : "Timesheet"], ["longrun", "Race pace"], ["tyres", "Tyres"]] as [Tab, string][]).map(([t, label]) => (
                   <button key={t} type="button" role="tab" aria-selected={view === t} disabled={t === "longrun" && !hasLong}
@@ -183,7 +183,7 @@ export default function Replay({ weekend, slug }: { weekend: Weekend; slug: stri
           {i === last && !weekend.live && (
             <div className="flex flex-wrap items-center gap-4 border-y border-line py-5">
               <div className="mr-auto">
-                <p className="wide text-xl">Every session before the race is in.</p>
+                <p className="h3">Every session before the race is in.</p>
                 <p className="text-sm text-ink-2">See how the prediction held up against the real result.</p>
               </div>
               <button type="button" onClick={reveal}
@@ -197,25 +197,34 @@ export default function Replay({ weekend, slug }: { weekend: Weekend; slug: stri
   );
 }
 
-/** Commentary for every revealed session, newest first, in the style of race-control messages. */
+/** Commentary in the style of race-control messages: the latest session in full, earlier ones
+ *  behind a disclosure so the column keeps a steady height. */
 function RaceControl({ steps }: { steps: Weekend["steps"] }) {
+  const latest = steps[steps.length - 1];
+  const earlier = steps.slice(0, -1).reverse();
+  const block = (s: Weekend["steps"][number], current: boolean) => (
+    <div key={s.session}>
+      <p className="mb-1.5 text-xs">
+        <span className={`rounded-sm px-1.5 py-0.5 font-semibold ${current ? "bg-ink text-bg" : "bg-surface-3 text-ink"}`}>{s.short}</span>
+      </p>
+      <ul className={`space-y-1.5 leading-snug ${current ? "text-[16px]" : "text-[15px] text-ink-2"}`}>
+        {s.commentary.map((c) => <li key={c}>{c}</li>)}
+      </ul>
+    </div>
+  );
   return (
-    <div className="panel flex flex-col p-5">
-      <h2 className="wide text-lg">Race control</h2>
-      <p className="text-sm text-ink-2">What each session told us, newest first.</p>
-      <ol className="mt-3 max-h-[22rem] space-y-4 overflow-y-auto pr-1">
-        {[...steps].reverse().map((s, k) => (
-          <li key={s.session} className={k === 0 ? "" : "opacity-70"}>
-            <p className="mb-1.5 flex items-center gap-2 text-xs text-ink-2">
-              <span className={`rounded-sm px-1.5 py-0.5 font-semibold ${k === 0 ? "bg-ink text-bg" : "bg-surface-3 text-ink"}`}>{s.short}</span>
-              {k === 0 ? "Latest" : null}
-            </p>
-            <ul className="space-y-1.5 text-[15px] leading-snug">
-              {s.commentary.map((c) => <li key={c}>{c}</li>)}
-            </ul>
-          </li>
-        ))}
-      </ol>
+    <div className="border-t border-line pt-4">
+      <h2 className="h3">Race control</h2>
+      <p className="text-sm text-ink-2">What {latest.session} told us.</p>
+      <div className="mt-3">{block(latest, true)}</div>
+      {earlier.length > 0 && (
+        <details className="group mt-4">
+          <summary className="cursor-pointer select-none text-sm text-ink-2 hover:text-ink">
+            <span className="group-open:hidden">Show</span><span className="hidden group-open:inline">Hide</span> earlier sessions ({earlier.length})
+          </summary>
+          <div className="mt-3 space-y-4">{earlier.map((s) => block(s, false))}</div>
+        </details>
+      )}
     </div>
   );
 }
@@ -230,7 +239,7 @@ function Intro({ weekend, onStart, onPlay }: { weekend: Weekend; onStart: () => 
   return (
     <section className="grid gap-8 md:grid-cols-[1.2fr_1fr]" aria-label="How the replay works">
       <div>
-        <h2 className="wide text-3xl">{weekend.live ? "Follow the weekend so far" : "Relive it one session at a time"}</h2>
+        <h2 className="h2">{weekend.live ? "Follow the weekend so far" : "Relive it one session at a time"}</h2>
         <p className="mt-3 max-w-prose text-[16px] leading-relaxed text-ink-2">
           Each session lights one of the start lights. After each one you&apos;ll see what happened, how the race
           prediction moved and how sure it is. Later sessions stay hidden until you reach them, and the race result

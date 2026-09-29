@@ -70,7 +70,7 @@ export default function RaceReveal({ weekend, slug, model, rowsFor }: {
 
       <div className="panel p-4 sm:p-5">
         <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-ink-2">
-          <h3 className="wide mr-auto text-xl text-ink">Predicted against actual</h3>
+          <h3 className="h3 mr-auto text-ink">Predicted against actual</h3>
           <span className="inline-flex items-center gap-1.5"><span className="h-3 w-3 rounded-full border-2 border-ink-2" />predicted</span>
           <span className="inline-flex items-center gap-1.5"><span className="h-3 w-3 rounded-full bg-ink-2" />actual</span>
         </div>

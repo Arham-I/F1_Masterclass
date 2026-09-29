@@ -41,7 +41,7 @@ export default function GuidePage() {
       </header>
 
       <section aria-labelledby="how">
-        <h2 id="how" className="wide text-2xl">How to use the replay</h2>
+        <h2 id="how" className="h2">How to use the replay</h2>
         <ol className="mt-4 grid gap-6 border-t border-line pt-4 sm:grid-cols-3">
           {[
             ["1", "Pick a weekend", "Choose any race from the season calendar on the home page."],
@@ -62,7 +62,7 @@ export default function GuidePage() {
       <Terms id="charts" title="The charts" rows={CHARTS} />
 
       <section aria-labelledby="tyres">
-        <h2 id="tyres" className="wide text-2xl">Tyre colours</h2>
+        <h2 id="tyres" className="h2">Tyre colours</h2>
         <ul className="mt-4 grid gap-3 sm:grid-cols-5">
           {(["SOFT", "MEDIUM", "HARD", "INTERMEDIATE", "WET"] as const).map((c) => (
             <li key={c} className="flex items-center gap-3">
@@ -78,7 +78,7 @@ export default function GuidePage() {
 
       <section aria-labelledby="model" className="grid gap-6 lg:grid-cols-2">
         <div>
-          <h2 id="model" className="wide text-2xl">How the prediction works</h2>
+          <h2 id="model" className="h2">How the prediction works</h2>
           <ol className="mt-4 space-y-3 text-[15px] leading-relaxed text-ink-2">
             <li><b className="text-ink">1. Rank the field.</b> Start from the best evidence so far: qualifying order if it has happened, otherwise practice and Sprint pace, team and driver form.</li>
             <li><b className="text-ink">2. Allow for comebacks.</b> A fast car that qualified out of position tends to move forward, more so at tracks where overtaking is easy.</li>
@@ -87,7 +87,7 @@ export default function GuidePage() {
           </ol>
         </div>
         <div>
-          <h2 className="wide text-2xl">Which model?</h2>
+          <h2 className="h2">Which model?</h2>
           <p className="mt-3 text-[15px] leading-relaxed text-ink-2">
             Several models compete, from a simple &ldquo;qualifying order&rdquo; rule to statistical models trained on every
             race since 2022. <b className="text-ink">Auto</b> (the default) uses whichever has the best record so far this
@@ -103,7 +103,7 @@ export default function GuidePage() {
 function Terms({ id, title, rows }: { id: string; title: string; rows: string[][] }) {
   return (
     <section aria-labelledby={id}>
-      <h2 id={id} className="wide text-2xl">{title}</h2>
+      <h2 id={id} className="h2">{title}</h2>
       <dl className="mt-4 divide-y divide-line border-y border-line">
         {rows.map(([k, v]) => (
           <div key={k} className="grid gap-1 py-4 sm:grid-cols-[14rem_1fr] sm:gap-6">
