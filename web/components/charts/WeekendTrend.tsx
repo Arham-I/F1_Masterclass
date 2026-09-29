@@ -86,17 +86,17 @@ export default function WeekendTrend({ steps, upto, rowsAt, drivers }: {
               <span className="text-ink-2">{q.d}</span>
             </p>
           ))}
-          <p className="mt-1.5 text-ink-2">Typical miss <b className="num text-ink">{miss[hover].toFixed(1)}</b> places</p>
+          <p className="mt-1.5 text-ink-2">Typical miss <b className="num text-ink">±{miss[hover].toFixed(1)}</b> places</p>
         </div>
       )}
       </div>
       <div className="mt-3 border-t border-line pt-3">
-        <p className="text-xs text-ink-3">Typical miss in places for cars that finish: this model&apos;s average miss at the same point of the previous 40 race weekends</p>
+        <p className="text-xs text-ink-3">Typical miss for cars that finish: on average they end up this many places either side of their predicted position, going by how far out this model was at the same point of the previous 40 race weekends</p>
         <ol className="mt-2 grid gap-1.5" style={{ gridTemplateColumns: `repeat(${steps.length}, minmax(0, 1fr))` }}>
           {steps.map((s, i) => (
             <li key={s.session} className={`rounded-md px-1 py-1.5 text-center ${i === upto ? "bg-surface-3 ring-1 ring-ink" : "bg-surface-2"}`}>
               <span className="block text-[11px] text-ink-2">{s.short}</span>
-              <span className={`num block text-sm font-semibold ${i <= upto ? "" : "text-ink-3"}`}>{i <= upto ? miss[i].toFixed(1) : "?"}</span>
+              <span className={`num block text-sm font-semibold ${i <= upto ? "" : "text-ink-3"}`}>{i <= upto ? `±${miss[i].toFixed(1)}` : "?"}</span>
             </li>
           ))}
         </ol>
