@@ -82,7 +82,7 @@ export default function RaceReveal({ weekend, slug, rowsFor }: {
   );
 
   return (
-    <section className="space-y-8" aria-labelledby="race-title">
+    <section className="checker-edge space-y-8" aria-labelledby="race-title">
       <div>
         <h2 id="race-title" className="wide text-4xl sm:text-5xl">{drivers[winner.driver]?.name ?? winner.driver} wins</h2>
         <ul className="mt-4 max-w-3xl space-y-1.5 text-[16px] leading-relaxed text-ink-2">

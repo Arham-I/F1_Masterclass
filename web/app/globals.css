@@ -118,6 +118,27 @@ body {
   pointer-events: none;
 }
 
+/* Chequered-flag edge (grey and black) down the left of a section. It marks the finish, so it is
+   used only where the race result is shown. */
+.checker-edge {
+  position: relative;
+  padding-left: 2rem;
+}
+.checker-edge::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 16px;
+  background-image: conic-gradient(var(--housing) 25%, #555b63 0 50%, var(--housing) 0 75%, #555b63 0);
+  background-size: 16px 16px;
+}
+@media (max-width: 639px) {
+  .checker-edge { padding-left: 1.25rem; }
+  .checker-edge::before { width: 8px; background-size: 8px 8px; }
+}
+
 .num {
   font-variant-numeric: tabular-nums;
 }
