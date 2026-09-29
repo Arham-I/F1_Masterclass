@@ -46,9 +46,21 @@ def refresh_meta(year: int) -> None:
                      "sessions": json.dumps(sessions)})
     pd.DataFrame(rows).to_csv(SCHEDULE_FILE, index=False)
 
+    # Driver names: only for codes we don't already have. A full scan loads ~80 sessions, which is
+    # slow warm and hits the rate limit cold (it is the whole cost of this step on CI), and a name
+    # never changes once known - only a new driver needs fetching.
+    names: dict[str, dict] = {}
+    if DRIVERS_FILE.exists():
+        saved = pd.read_csv(DRIVERS_FILE, dtype={"number": str})
+        names = {r.driver: {"name": r["name"], "number": str(r["number"])} for _, r in saved.iterrows()}
+
     f = store.read("features", [year])
-    names = {}
-    for (rd, session) in f[["round", "session"]].drop_duplicates().itertuples(index=False):
+    todo = [(rd, s) for rd, s in f[["round", "session"]].drop_duplicates().itertuples(index=False)
+            if not set(f.loc[f["round"] == rd, "driver"]) <= set(names)]
+    if not todo:
+        print(f"  names: {len(names)} drivers known, nothing new")
+        return
+    for (rd, session) in todo:
         try:
             s = fastf1.get_session(year, int(rd), session)
             s.load(laps=False, telemetry=False, weather=False, messages=False)
@@ -59,6 +71,7 @@ def refresh_meta(year: int) -> None:
             if isinstance(d.Abbreviation, str) and d.Abbreviation:
                 names[d.Abbreviation] = {"name": f"{d.FirstName} {d.LastName}".strip(),
                                          "number": str(d.DriverNumber)}
+    print(f"  names: scanned {len(todo)} session(s), {len(names)} drivers known")
     pd.DataFrame([{"driver": k, **v} for k, v in sorted(names.items())]).to_csv(DRIVERS_FILE, index=False)
 
 

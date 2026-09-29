@@ -1,0 +1,52 @@
+# Does FastF1 work from GitHub's runners at all?
+#
+# The F1 timing endpoint is not a supported public API, and CI address ranges are sometimes
+# rate-limited or blocked. Run this once by hand before trusting the scheduled updater; it fetches
+# a schedule and one finished session and reports what happened. It writes nothing.
+name: FastF1 probe
+
+on:
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - run: pip install -r requirements-dev.txt
+
+      - name: Fetch a schedule and one session
+        run: |
+          python - <<'PY'
+          import time, traceback, warnings
+          warnings.filterwarnings("ignore")
+          from f1cc import data
+
+          ok = True
+
+          def step(label, fn):
+              global ok
+              t0 = time.time()
+              try:
+                  out = fn()
+                  print(f"PASS  {label}  ({time.time() - t0:.1f}s)  {out}")
+              except Exception as e:
+                  ok = False
+                  print(f"FAIL  {label}  ({time.time() - t0:.1f}s)  {type(e).__name__}: {e}")
+                  traceback.print_exc()
+
+          step("schedule 2026", lambda: f"{len(data.get_schedule(2026))} rounds")
+          step("session 2026 R15 Qualifying",
+               lambda: f"{len(data.load_session(2026, 15, 'Qualifying').laps)} laps")
+
+          print("\nFastF1 works from GitHub Actions." if ok else
+                "\nFastF1 does NOT work from GitHub Actions; keep the updates on a local timer.")
+          raise SystemExit(0 if ok else 1)
+          PY
