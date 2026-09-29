@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.arham.f1cc.autoupdate</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/macbookair/Desktop/GitRepos/F1_Masterclass/.venv/bin/python</string>
+        <string>scripts/auto_update.py</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/macbookair/Desktop/GitRepos/F1_Masterclass</string>
+
+    <!-- Every 15 minutes. Unlike cron, launchd runs a missed interval when the Mac wakes. -->
+    <key>StartInterval</key>
+    <integer>900</integer>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <!-- launchd's default PATH is /usr/bin:/bin:/usr/sbin:/sbin, which omits Homebrew. `git`
+         pushes through `gh` as its credential helper, and gh lives in /opt/homebrew/bin. -->
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>/tmp/f1cc-autoupdate.log</string>
+    <key>StandardErrorPath</key>
+    <string>/tmp/f1cc-autoupdate.log</string>
+
+    <key>LowPriorityIO</key>
+    <true/>
+    <key>Nice</key>
+    <integer>5</integer>
+</dict>
+</plist>

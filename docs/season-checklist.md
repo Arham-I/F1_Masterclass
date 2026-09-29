@@ -25,7 +25,23 @@ It is cheap when idle: it reads the local schedule and the stored parquet, and e
 touching the network if nothing is due. A full run with one new session takes about 90 seconds.
 One run at a time (`.auto_update.lock`; a lock older than 3 h is ignored as stale).
 
-Run it on a timer through a race weekend. Every 15 minutes is plenty:
+Run it on a timer through a race weekend. Every 15 minutes is plenty. On macOS use a LaunchAgent
+rather than cron: launchd runs a missed interval when the Mac wakes (cron just skips it), and it
+runs in your login session, so it is not caught by the Full Disk Access rules that block cron from
+`~/Desktop`.
+
+```bash
+cp deploy/com.arham.f1cc.autoupdate.plist ~/Library/LaunchAgents/
+launchctl load ~/Library/LaunchAgents/com.arham.f1cc.autoupdate.plist
+tail -f /tmp/f1cc-autoupdate.log      # watch it
+launchctl list | grep f1cc            # PID / last exit code
+```
+
+Edit the paths in the plist if the repo moves. To publish automatically, add `--push` to
+`ProgramArguments`, then unload and load it again. The plist puts Homebrew on `PATH` because git
+pushes through `gh` as its credential helper and launchd's default `PATH` omits `/opt/homebrew/bin`.
+
+On Linux, cron is fine:
 
 ```cron
 */15 * * * * cd /path/to/F1_Masterclass && .venv/bin/python scripts/auto_update.py --push >> /tmp/f1cc.log 2>&1
