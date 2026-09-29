@@ -16,17 +16,17 @@ const NUMBERS = [
   ["Predicted finish", "Our best guess at each driver's finishing position."],
   ["Win / Podium / Points chance", "We simulate the race 20,000 times, adding realistic randomness: driver errors, strategy swings, retirements. The chance is the share of those races in which the driver won, finished top 3, or finished top 10 (the points places)."],
   ["Retirement chance", "Chance of not reaching the finish, based on how often this team's cars have retired, blended with the long-term average."],
-  ["Likely finish range", "The range of places the driver finishes in 8 out of 10 simulated races. Narrow = confident."],
+  ["Likely finish range", "The race is simulated 20,000 times. The range covers the positions the driver finished in 8 out of 10 of those races: 1 in 10 went better, 1 in 10 worse. A narrow range means a confident prediction."],
   ["± places (typical error)", "How far off a prediction like this usually is for cars that finish. It shrinks as the weekend goes on; before qualifying the model has to guess the grid too."],
   ["Order score", "How closely a predicted order matches the real one, from 0 (no better than random) to 1 (perfect). Also known as Spearman rank correlation."],
 ];
 
 const CHARTS = [
   ["Timesheet", "Each driver's fastest lap as a gap to the quickest. In qualifying it is the official order."],
-  ["Race pace", "In practice, teams run several laps in a row with race fuel, known as a race simulation. We compare those laps with the typical car on the same tyre. A dot left of the line means faster than average over a long run - often a better race clue than one fast lap."],
+  ["Race pace", "Practice only. Teams run 5 or more laps back to back on one set of tyres with race fuel, known as a race simulation. Each dot is a driver's median lap on those runs, compared with the median car of the field on the same tyre compound. Left of the line means quicker than that car over a long run, often a better race clue than one fast lap."],
   ["Tyres", "Every run each driver did, coloured by tyre. Teams use practice to learn how long each compound lasts."],
   ["Who can win", "How the top contenders' chances moved after each session: who is gaining and who is fading."],
-  ["Predicted against actual", "After the race: a hollow dot for where we predicted, a filled dot for where the driver finished."],
+  ["Predicted against actual", "After the race: a filled dot for where the driver finished and an outlined marker for each model's prediction. You can compare up to three models at once."],
   ["Timing colours", "As on the TV timing screens, purple marks the fastest of the session and green marks a gain."],
 ];
 

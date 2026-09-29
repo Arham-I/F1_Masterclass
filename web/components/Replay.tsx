@@ -83,8 +83,9 @@ export default function Replay({ weekend, slug }: { weekend: Weekend; slug: stri
   const step = i >= 0 ? steps[i] : null;
   const now = step ? rowsFor(step.stage, model) : null;
   const prev = i > 0 ? rowsFor(steps[i - 1].stage, model).rows : undefined;
-  const hasLong = !!step?.longrun.length;
-  const view: Tab = tab === "longrun" && !hasLong ? "timesheet" : tab;
+  // Race pace comes from practice long runs; qualifying and Sprint sessions never have them.
+  const isPractice = step?.kind === "practice";
+  const view: Tab = tab === "longrun" && !isPractice ? "timesheet" : tab;
   const lightsMs = (steps.length + 1) * LIGHT_STEP_MS + LIGHTS_HOLD_MS;
 
   return (
@@ -110,7 +111,7 @@ export default function Replay({ weekend, slug }: { weekend: Weekend; slug: stri
 
       {race ? (
         <div className="after-lights" style={{ ["--delay" as string]: `${lightsMs}ms` }}>
-          <RaceReveal weekend={weekend} slug={slug} model={model} rowsFor={rowsFor} />
+          <RaceReveal weekend={weekend} slug={slug} rowsFor={rowsFor} />
         </div>
       ) : !step ? (
         <Intro weekend={weekend} onStart={() => go(0)} onPlay={() => setPlaying(true)} />
@@ -120,7 +121,7 @@ export default function Replay({ weekend, slug }: { weekend: Weekend; slug: stri
             <RaceControl steps={steps.slice(0, i + 1)} />
             <div className="border-t border-line pt-4">
               <h2 className="h3">Who can win
-                <InfoTip label="Who can win">The four drivers most likely to win right now, and how their chances moved after each session. Underneath: how far off a typical prediction is at each point. It shrinks as the weekend reveals more.</InfoTip>
+                <InfoTip label="Who can win">The four drivers most likely to win right now, and how their chances moved after each session. Hover over or tap a session for exact numbers. Underneath: how many places a typical prediction is off by at each point, which shrinks as the weekend reveals more.</InfoTip>
               </h2>
               <div className="mt-3">
                 <WeekendTrend steps={steps} upto={i} rowsAt={(k) => rowsFor(steps[k].stage, model).rows} drivers={weekend.drivers} />
@@ -158,8 +159,8 @@ export default function Replay({ weekend, slug }: { weekend: Weekend; slug: stri
             <div className="mb-3 flex flex-wrap items-end gap-3">
               <h2 id="session-title" className="mr-auto h2">{step.session}</h2>
               <div className="flex gap-1 rounded-md bg-surface-2 p-1" role="tablist" aria-label="Session charts">
-                {([["timesheet", step.kind === "sprint" ? "Result" : "Timesheet"], ["longrun", "Race pace"], ["tyres", "Tyres"]] as [Tab, string][]).map(([t, label]) => (
-                  <button key={t} type="button" role="tab" aria-selected={view === t} disabled={t === "longrun" && !hasLong}
+                {([["timesheet", step.kind === "sprint" ? "Result" : "Timesheet"], ...(isPractice ? [["longrun", "Race pace"]] : []), ["tyres", "Tyres"]] as [Tab, string][]).map(([t, label]) => (
+                  <button key={t} type="button" role="tab" aria-selected={view === t}
                     onClick={() => setTab(t)}
                     className={`rounded px-3 py-1.5 text-sm ${view === t ? "bg-ink font-semibold text-bg" : "text-ink-2 hover:text-ink disabled:opacity-35"}`}>
                     {label}
@@ -171,7 +172,7 @@ export default function Replay({ weekend, slug }: { weekend: Weekend; slug: stri
               {view === "timesheet" && (step.kind === "sprint" ? "The official Sprint result." :
                 step.kind === "quali" ? "The official qualifying order. Bars show each driver's gap to pole; the fastest lap is in purple, as on the timing screens." :
                 "Each driver's fastest lap as a gap to the quickest (in purple). Practice times are a clue only: teams run different fuel loads and tyres.")}
-              {view === "longrun" && "Race simulations: laps run back to back on one set of tyres, compared with the typical car on the same tyre. The dot is the typical lap, the bar covers the middle half. Further left means faster race pace."}
+              {view === "longrun" && "Race simulations: runs of 5 or more clean laps back to back on one set of tyres. Each dot is the driver's median long-run lap, compared with the median car of the field on the same tyre compound (the line at 0). −0.50s means half a second a lap quicker than that car. The bar covers the middle half of the driver's long-run laps. Only practice has these runs."}
               {view === "tyres" && "Every run each driver did, coloured by tyre. Softs are fastest but wear quickest; hards are slowest but last longest."}
             </p>
             {view === "timesheet" && <Timesheet step={step} drivers={weekend.drivers} />}

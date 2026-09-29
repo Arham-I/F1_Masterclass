@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import { pct } from "@/lib/format";
 import type { Drivers, PredRow, Step } from "@/lib/types";
 
@@ -9,6 +12,7 @@ const W = 520, H = 220, L = 38, R = 70, T = 14, B = 34;
 export default function WeekendTrend({ steps, upto, rowsAt, drivers }: {
   steps: Step[]; upto: number; rowsAt: (i: number) => PredRow[]; drivers: Drivers;
 }) {
+  const [hover, setHover] = useState<number | null>(null);
   const shown = steps.slice(0, upto + 1).map((_, i) => rowsAt(i));
   const top = [...shown[upto]].sort((a, b) => b.p_win - a.p_win).slice(0, 4).map((r) => r.driver);
   const series = top.map((d) => ({ d, pts: shown.map((rows) => rows.find((r) => r.driver === d)?.p_win ?? 0) }));
@@ -26,6 +30,7 @@ export default function WeekendTrend({ steps, upto, rowsAt, drivers }: {
 
   return (
     <div>
+      <div className="relative" onMouseLeave={() => setHover(null)}>
       <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img"
         aria-label={`Win chance after each session. Now: ${series.map((s) => `${s.d} ${pct(s.pts[upto], 1)}`).join(", ")}`}>
         {ticks.map((t) => (
@@ -60,7 +65,31 @@ export default function WeekendTrend({ steps, upto, rowsAt, drivers }: {
             </text>
           );
         })}
+        {hover != null && <line x1={x(hover)} x2={x(hover)} y1={T} y2={H - B} stroke="var(--ink-2)" strokeWidth="1" aria-hidden />}
+        {shown.map((_, i) => {
+          const half = steps.length > 1 ? (W - L - R) / (steps.length - 1) / 2 : 40;
+          return (
+            <rect key={i} x={x(i) - half} y={T} width={half * 2} height={H - T - B} fill="transparent" tabIndex={0}
+              aria-label={`After ${steps[i].short}: ${series.map((q) => `${q.d} ${pct(q.pts[i], 1)}`).join(", ")}`}
+              onMouseEnter={() => setHover(i)} onFocus={() => setHover(i)} onBlur={() => setHover(null)} className="outline-none" />
+          );
+        })}
       </svg>
+      {hover != null && (
+        <div className="pointer-events-none absolute top-2 z-10 w-44 rounded border border-line bg-surface-3 p-2.5 text-xs shadow-lg"
+          style={{ left: `${Math.min((x(hover) / W) * 100, 62)}%`, transform: "translateX(8px)" }}>
+          <p className="mb-1.5 text-ink-2">Chance to win after {steps[hover].short}</p>
+          {[...series].sort((a, b) => b.pts[hover] - a.pts[hover]).map((q) => (
+            <p key={q.d} className="flex items-center gap-2">
+              <span className="h-0.5 w-3" style={{ background: drivers[q.d]?.color }} aria-hidden />
+              <b className="num text-ink">{pct(q.pts[hover], 1)}</b>
+              <span className="text-ink-2">{q.d}</span>
+            </p>
+          ))}
+          <p className="mt-1.5 text-ink-2">Typical error <b className="num text-ink">±{sigma[hover].toFixed(1)}</b> places</p>
+        </div>
+      )}
+      </div>
       <div className="mt-3 border-t border-line pt-3">
         <p className="text-xs text-ink-3">Typical error of the prediction (places, for cars that finish)</p>
         <ol className="mt-2 grid gap-1.5" style={{ gridTemplateColumns: `repeat(${steps.length}, minmax(0, 1fr))` }}>

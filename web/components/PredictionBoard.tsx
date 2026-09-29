@@ -65,7 +65,7 @@ export default function PredictionBoard({ rows, prev, step, drivers }: {
         <span />
         <span>Driver</span>
         <span className="hidden md:block">Likely finish
-          <InfoTip label="Likely finish">The dot is our predicted finishing position. The bar covers the places the driver finishes in 8 out of 10 simulated races; a short bar means we are confident.</InfoTip>
+          <InfoTip label="Likely finish">The race is simulated 20,000 times. The bar spans the positions this driver finished in 8 out of 10 of those races (1 in 10 went better, 1 in 10 worse). The dot is the predicted position. A short bar means a confident prediction.</InfoTip>
         </span>
         <span className="text-right">Win<InfoTip label="Win chance" align="right">Share of 20,000 simulated races this driver won. The simulation adds realistic randomness: mistakes, strategy, and retirements.</InfoTip></span>
         <span className="text-right">Podium<InfoTip label="Podium chance" align="right">Chance of finishing in the top 3.</InfoTip></span>
