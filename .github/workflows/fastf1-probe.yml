@@ -7,6 +7,15 @@
 # F1 blocks datacenter address ranges, so no cloud CI can pull session data and the scheduled
 # updates have to run somewhere with a residential IP (see docs/season-checklist.md).
 #
+# There are now TWO barriers, and this probe only ever tested the first:
+#   1. the datacenter-IP block above (403), and
+#   2. since October 2026, livetiming requires a Formula 1 account with an F1TV Access (or higher)
+#      subscription - archived sessions included, not just the live feed. Unauthenticated requests
+#      get 401 from anywhere, residential IPs too. FastF1 3.9+ signs in with F1_USERNAME/
+#      F1_PASSWORD; this workflow passes neither, so a 401 here says nothing about the IP block.
+# Opening the feed to datacenter IPs would therefore no longer be enough on its own: running this
+# in CI for real would mean putting F1TV credentials in repository secrets.
+#
 # Kept so the finding can be re-checked rather than re-argued: run it by hand if F1 ever opens the
 # feed up. It writes nothing.
 name: FastF1 probe
@@ -47,8 +56,8 @@ jobs:
           logging.basicConfig(level=logging.DEBUG, stream=sys.stdout,
                               format="%(levelname)s %(name)s: %(message)s")
           from f1cc import data
-          data._enable_cache()
-          logging.getLogger("fastf1").setLevel(logging.DEBUG)   # _enable_cache quietens it
+          data._setup()
+          logging.getLogger("fastf1").setLevel(logging.DEBUG)   # _setup quietens it
 
           print(f"schedule: {len(data.get_schedule(2026))} rounds")
           try:

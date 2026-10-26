@@ -5,6 +5,9 @@ __pycache__/
 .pytest_cache/
 .DS_Store
 .streamlit/secrets.toml
+# F1 account credentials belong in ~/.config/f1cc/f1tv.env; refuse to commit a stray copy.
+*.env
+f1tv.env
 .playwright-mcp/
 experiments_out/
 .auto_update.lock

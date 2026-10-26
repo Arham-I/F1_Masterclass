@@ -56,6 +56,17 @@ Two things to know before relying on it:
   (403), so a GitHub Action cannot pull session data at all — checked 2026-09-29, and
   `.github/workflows/fastf1-probe.yml` re-checks it in a minute if that ever changes. Anything
   running the pull needs a residential connection.
+- **The pull needs a Formula 1 account.** Since October 2026 `livetiming.formula1.com` answers
+  **401** without one holding an F1TV Access (or higher) subscription — archived sessions too, not
+  just the live feed. FastF1 3.9+ signs in with `F1_USERNAME`/`F1_PASSWORD`; `f1cc/data.py` reads
+  them from `~/.config/f1cc/f1tv.env` (mode 600, deliberately outside the repo — a secret in the
+  working tree is one `git add -A` from being published). Set it up once with
+  `bash scripts/set_f1_credentials.sh`, and check it with
+  `.venv/bin/python scripts/check_f1_auth.py`, which verifies the sign-in *and* a real session
+  load — a token alone does not prove the subscription is active. FastF1 caches the token for about
+  four days and re-signs in by itself, which is what lets the unattended job keep running.
+  If an update starts failing, run the check first: it separates bad credentials from a session
+  that is not published yet.
 - **`--push` commits and pushes on its own.** Start without it for a weekend and check what lands
   in `git status` before letting it publish.
 
@@ -77,8 +88,14 @@ Still manual: the **starting grid** after qualifying, and the **holdout table** 
 
 Traps:
 - **Pulling too early.** The backfill skips any (round, session) already stored, so a session
-  pulled before FastF1 had all its data stays incomplete forever. If a live session looks thin
-  (fewer than 20 drivers, few laps), delete that round from `data/*_2026.parquet` and re-pull.
+  pulled before FastF1 had all its data stays incomplete forever. Repair one with
+  `--rounds N --refetch "Qualifying"`, which drops those rows and pulls them again.
+  A degraded pull does not always look thin: 2026 R16 and 2025 R23 stored with full lap data but an
+  **empty results table**, so qualifying had no classified order and the site silently ordered the
+  timesheet by lap time instead. `tests/test_data_integrity.py` now fails and names the round if a
+  stored qualifying has no positions. Re-fetch only the affected session: re-pulling a whole round
+  also re-reads its practice laps, which can shift `longrun_delta_s` and the training inputs the
+  frozen model was fitted on.
   This is also why the race waits 60 minutes rather than 30: a stewards' penalty applied after the
   flag changes the classification, and a race stored before it lands keeps the provisional order.
   If a penalty is announced later, delete that round and re-pull.
@@ -88,7 +105,7 @@ Traps:
 - **Rate limit.** FastF1 allows ~500 API calls/hour. A weekend is well under that; a multi-season
   rebuild is not (the backfill waits it out).
 - **Offline rebuilds** (after changing `f1cc/features.py`): delete `data/{features,laps,stints}_*.parquet`
-  and rebuild from the local cache. Call `data._enable_cache()` *before*
+  and rebuild from the local cache. Call `data._setup()` *before*
   `fastf1.Cache.offline_mode(True)` (enabling the cache resets offline mode), and run behind
   `HTTPS_PROXY=http://127.0.0.1:9` so nothing can reach the network. Takes ~3 minutes.
 

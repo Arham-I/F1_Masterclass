@@ -118,11 +118,11 @@ winner log-loss, podium Brier and RPS (the order does not change); Auto - Spearm
 | | Ridge, all seasons | 0.671 | **1.61** | 0.085 | 0.117 |
 | | Ridge, same season | **0.684** | 1.80 | 0.079 | 0.114 |
 | | Auto | 0.677 | 1.81 | **0.076** | **0.113** |
-| **After Qualifying** | Baseline | 0.697 | 0.78 | 0.070 | 0.108 |
-| | **Grid + recovery** | **0.709** | 0.75 | 0.070 | **0.107** |
-| | Ridge, all seasons | 0.699 | 1.18 | 0.075 | 0.110 |
-| | Ridge, same season | 0.692 | 1.34 | **0.068** | 0.110 |
-| | **Auto** (app default) | 0.704 | **0.745** | 0.069 | 0.108 |
+| **After Qualifying** | Baseline | 0.697 | 0.782 | 0.069 | 0.108 |
+| | **Grid + recovery** | **0.709** | 0.765 | 0.070 | **0.107** |
+| | Ridge, all seasons | 0.696 | 1.178 | 0.076 | 0.110 |
+| | Ridge, same season | 0.692 | 1.341 | **0.068** | 0.110 |
+| | **Auto** (app default) | 0.704 | **0.754** | **0.068** | 0.108 |
 
 Grid + recovery equals the baseline before Qualifying (its noise scales are learned separately,
 hence tiny differences). Over 2023-26 (84 races): ridge beats the baseline on order at every stage
@@ -132,14 +132,30 @@ beats it after Qualifying by +0.021 [+0.011, +0.031] (with track-dependent recov
 decisive (finishers vs qualifying order 0.87), which narrows every model's edge after
 Qualifying. Baku (R15, 7 retirements) pulled every order score down.
 
+The after-Qualifying row moved slightly on 2026-10-27 (Auto's log-loss 0.745 → 0.754, Ridge
+all-seasons' Spearman 0.699 → 0.696) when the §5 qualifying repair restored 2025 R23. Only this
+stage moved, and only on the probability metrics for three of the four models: their predicted
+*orders* are unchanged, but the noise widths are calibrated from pooled past error, and that round
+had been contributing the error of a model running without a qualifying order. Correcting it makes
+the spread slightly tighter and so the log-loss slightly worse — the model is now rightly a little
+more confident, and pays more when wrong.
+
 ## 5. Scoring corrections
 
 | Date | Problem | Fix |
 |---|---|---|
 | 2026-09-25 | Races were scored against the **FP1 entry list**, leaving out race drivers replaced by an FP1 rookie (up to seven per race, once the winner) | Score against everyone who raced |
 | 2026-09-25 | ~2.5% of qualifying "best laps" were **steward-deleted laps** (FastF1 flags them only with race-control messages) | Official Q1-Q3 times; practice still affected (see the checklist) |
+| 2026-10-27 | **2026 R16 and 2025 R23 qualifying stored with an empty results table** (pulled while Formula 1 was gating its API): full lap data, but no classified order and no Q1-Q3 times, so `q_pos` was missing for those rounds | Re-pulled those two qualifying sessions once account access was restored (`backfill.py --refetch`). `tests/test_data_integrity.py` now fails and names the round if it recurs |
 
-Neither changed a conclusion; all numbers here are after both fixes.
+Neither of the first two changed a conclusion; all numbers here are after both fixes.
+
+The third is a **data repair, not a model change**, so it does not lift the freeze: it restores an
+input that an upstream outage had dropped, and tunes nothing. It does move R16's holdout score,
+because stage 4 had been scoring that round without the qualifying order it is supposed to see. No
+holdout number had been published beforehand, so the table below reports the corrected values.
+Only the affected qualifying sessions were re-pulled: re-pulling their practice sessions too would
+have shifted `longrun_delta_s`, which *would* have altered the frozen model's training inputs.
 
 ## 6. Frozen model and holdout
 
@@ -158,7 +174,21 @@ same rules, from races already run - exactly as it would in real use. A change m
 to a holdout result ends the holdout for the races that prompted it; any new version then needs
 fresh races to be judged. Holdout results are reported separately below as they come in.
 
-| Holdout race | Auto after Qualifying: Spearman | Winner log-loss | Podium Brier | RPS |
-|---|---|---|---|---|
-| (none yet) | | | | |
+| Holdout race | Auto's pick | Spearman | Winner log-loss | Podium Brier | RPS |
+|---|---|---|---|---|---|
+| R16 Bahrain | Grid + recovery | 0.729 | 0.381 | 0.059 | 0.1141 |
+| R17 Singapore | Grid + recovery | 0.869 | 0.640 | 0.047 | 0.0977 |
+| R18 United States | Grid + recovery | 0.904 | 0.829 | 0.049 | 0.0742 |
+| **Mean (3 races)** | | **0.834** | **0.617** | **0.052** | **0.0953** |
+| *R1-R15 development, same metric* | | *0.704* | *0.754* | *0.068* | *0.1077* |
+
+Auto chose **Grid + recovery** after qualifying in all three. The holdout is ahead of the
+development races on every metric, which is the opposite of the usual direction — but **three races
+prove nothing**: that spread sits well inside the race-to-race variation in §4 (per-race Spearman
+across 2026 runs from 0.37 to 0.94), and R18 in particular was an orderly race, the easy kind to
+predict. Read this table again at R23. Nothing here is a reason to change the model: under the
+freeze rules a change made in response to these numbers would end the holdout.
+
+R16's row is **after** the qualifying data repair in §5. Scored on the broken pull it was 0.716;
+the model had been denied the qualifying order it is meant to see at stage 4.
 

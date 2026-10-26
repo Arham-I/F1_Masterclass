@@ -10,6 +10,7 @@ would quietly corrupt every downstream feature, so every load is verified.
 from __future__ import annotations
 
 import logging
+import os
 from datetime import date
 from pathlib import Path
 
@@ -21,26 +22,50 @@ CACHE_DIR = ROOT / ".fastf1_cache"
 
 _SESSION_COLS = ["Session1", "Session2", "Session3", "Session4", "Session5"]
 
-_cache_ready = False
+_setup_done = False
+
+# Since October 2026, livetiming.formula1.com answers 401 without a Formula 1 account holding an
+# F1TV Access (or higher) subscription - archived sessions included, not just the live feed. FastF1
+# 3.9+ signs in with F1_USERNAME/F1_PASSWORD from the environment. The unattended updater runs with
+# no shell profile, so the credentials live in a 0600 file *outside* the repo; nothing here ever
+# reads a secret from the working tree, where it would be one `git add -A` from being published.
+CREDENTIALS_FILE = Path.home() / ".config" / "f1cc" / "f1tv.env"
 
 
 class EventMismatchError(RuntimeError):
     """FastF1 returned a different event than the one requested."""
 
 
-def _enable_cache() -> None:
-    global _cache_ready
-    if _cache_ready:
+def _load_credentials() -> None:
+    """Export F1_USERNAME/F1_PASSWORD from ``CREDENTIALS_FILE`` unless already in the environment."""
+    if os.environ.get("F1_USERNAME") and os.environ.get("F1_PASSWORD"):
+        return
+    try:
+        text = CREDENTIALS_FILE.read_text()
+    except OSError:
+        return                       # no file: FastF1 prompts if the shell is interactive
+    for line in text.splitlines():
+        line = line.strip()
+        if line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        os.environ.setdefault(key.strip(), value.strip().strip("\"'"))
+
+
+def _setup() -> None:
+    global _setup_done
+    if _setup_done:
         return
     CACHE_DIR.mkdir(exist_ok=True)
-    fastf1.Cache.enable_cache(str(CACHE_DIR))
+    fastf1.Cache.configure(cache_dir=str(CACHE_DIR))
     logging.getLogger("fastf1").setLevel(logging.ERROR)
-    _cache_ready = True
+    _load_credentials()
+    _setup_done = True
 
 
 def get_schedule(year: int) -> pd.DataFrame:
     """Race weekends for ``year`` (testing excluded), keyed by RoundNumber."""
-    _enable_cache()
+    _setup()
     sched = fastf1.get_event_schedule(year, include_testing=False)
     return sched[sched.RoundNumber > 0].reset_index(drop=True)
 
@@ -144,7 +169,7 @@ def session_complete(session) -> bool:
 
 def load_session(year: int, round_number: int, session_name: str):
     """Load one session (laps + weather, no telemetry), verified to be the requested event."""
-    _enable_cache()
+    _setup()
     sched = get_schedule(year)
     rows = sched[sched.RoundNumber == round_number]
     if rows.empty:

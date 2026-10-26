@@ -94,3 +94,18 @@ def test_grid_position_present_whenever_a_classified_result_exists(tables):
     race_like = f[f["session"].isin(["Race", "Sprint"])]
     classified = race_like[race_like["position"].notna()]
     assert classified["grid"].notna().mean() > 0.95  # allow a handful of DSQ/edge cases
+
+
+def test_every_qualifying_session_carries_its_official_order(tables):
+    """A stored Qualifying must have its classified positions.
+
+    These come from the results table, not the lap times, and a degraded response can drop them
+    while every other column still looks right: the session stores, is never re-fetched, and the
+    site quietly falls back to ordering the timesheet by lap time. 2026 R16 was stored that way
+    when Formula 1 began gating its API. Name the offenders rather than just failing.
+    """
+    f, _, _ = tables
+    quali = f[f["session"] == "Qualifying"]
+    have = quali.groupby(["year", "round"])["position"].apply(lambda s: s.notna().any())
+    missing = [f"{y} R{r:02d}" for (y, r), ok in have.items() if not ok]
+    assert not missing, f"qualifying sessions with no classified order: {', '.join(missing)}"

@@ -35,7 +35,7 @@ def refresh_meta(year: int) -> None:
     import fastf1
     from f1cc import data
 
-    data._enable_cache()
+    data._setup()
     sched = data.get_schedule(year)
     rows = []
     for r in sched.itertuples(index=False):

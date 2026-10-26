@@ -144,10 +144,15 @@ def test_grid_falls_back_to_qualifying_order_while_the_race_is_pending(stored):
     the timing data. Show qualifying order, flagged, rather than nothing."""
     tables, preds, bt = stored
     f = tables["features"]
-    rd = next((r for r in sorted(set(f["round"]), reverse=True)
+    # Pick a round the fallback can actually serve: qualifying has run *and* carries its official
+    # order, and no grid has been hand-entered. Dropping the Race then leaves the live-weekend
+    # state. Picking only on the grid would land on a weekend that has not qualified yet, whose
+    # last step is a practice session and so has no grid of any kind.
+    quali = f[(f["session"] == "Qualifying") & f["position"].notna()]
+    rd = next((r for r in sorted(set(quali["round"]), reverse=True)
                if store.starting_grid(f[f["session"] != "Race"], YEAR, r).empty), None)
     if rd is None:
-        pytest.skip("every stored round has a hand-entered grid")
+        pytest.skip("no stored round has a qualifying order without a hand-entered grid")
     pending = f[~((f["round"] == rd) & (f["session"] == "Race"))]
     q = site_export.build_weekend({**tables, "features": pending}, preds, bt, YEAR, rd, {}, True, {})["steps"][-1]
     assert q["grid_state"] == "provisional"

@@ -137,9 +137,12 @@ tests/                     leakage, data integrity, freshness, app smoke tests
 
 ## Data and known limitations
 
-- Data from [FastF1](https://github.com/theOehrly/Fast-F1) (Formula 1's public timing feed),
-  2022-2026, 460+ sessions. FastF1 is rate-limited (~500 calls/hour); cached sessions rebuild in
-  minutes.
+- Data from [FastF1](https://github.com/theOehrly/Fast-F1) (Formula 1's timing feed), 2022-2026,
+  460+ sessions. FastF1 is rate-limited (~500 calls/hour); cached sessions rebuild in minutes.
+  Since October 2026 the feed is no longer open: pulling **new** data needs a Formula 1 account
+  with an F1TV Access (or higher) subscription, and FastF1 3.9+ to sign in with it (see
+  `docs/season-checklist.md`). Nothing in `data/` depends on this — the deployed app and the
+  website read only committed files, so both run with no account and no network.
 - Long-run pace is confounded by fuel load, which the feed does not expose; wet sessions have few
   long runs (dry compounds only).
 - Race incidents (crashes, safety cars) are modelled as independent per driver. The pole sitter now

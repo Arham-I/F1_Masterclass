@@ -8,7 +8,13 @@ so re-running after an interruption (or after a new race weekend) only fetches w
     python scripts/backfill.py --years 2026 --rounds 14
     python scripts/backfill.py --years 2026 --in-progress   # also the finished sessions of a live weekend
 
+    python scripts/backfill.py --years 2026 --rounds 16 --refetch Qualifying   # repair a bad pull
+
 A live weekend's sessions are stored as they finish; its Race is added by a normal run afterwards.
+
+``--refetch`` exists because a stored session is otherwise never pulled again: a degraded response
+(2026 R16 arrived with an empty results table, so its qualifying had no classified order) would
+stay wrong for good. It drops the matching rows first, so the normal path re-pulls them.
 """
 from __future__ import annotations
 
@@ -66,7 +72,23 @@ def _store_overtakes(year: int, rnd: int) -> None:
     store.write("overtakes", year, pd.concat([old, ovt], ignore_index=True).sort_values("round"))
 
 
-def backfill_year(year: int, rounds: list[int] | None, in_progress: bool = False) -> list[tuple]:
+def _drop_sessions(existing: dict, year: int, rounds: list[int], sessions: list[str]) -> None:
+    """Forget stored rows for these sessions so the normal path pulls them again.
+
+    Writes nothing: the caller checkpoints whatever it refetches. Deliberately requires explicit
+    rounds, so a stray ``--refetch Race`` cannot wipe a season.
+    """
+    for table, df in existing.items():
+        if not len(df):
+            continue
+        doomed = df["round"].isin(rounds) & df["session"].isin(sessions)
+        if doomed.any():
+            print(f"  refetch: dropping {int(doomed.sum())} stored {table} rows", flush=True)
+            existing[table] = df[~doomed].reset_index(drop=True)
+
+
+def backfill_year(year: int, rounds: list[int] | None, in_progress: bool = False,
+                  refetch: list[str] | None = None) -> list[tuple]:
     sched = data.get_schedule(year)
     completed = set(data.completed_rounds(year))
     wanted = set(completed)
@@ -78,6 +100,8 @@ def backfill_year(year: int, rounds: list[int] | None, in_progress: bool = False
 
     existing = {t: (store.read(t, [year]) if store.path(t, year).exists() else pd.DataFrame())
                 for t in store.TABLES}
+    if refetch:
+        _drop_sessions(existing, year, rounds or [], refetch)
     done = set()
     if len(existing["features"]):
         done = set(zip(existing["features"]["round"], existing["features"]["session"]))
@@ -127,13 +151,18 @@ def main() -> int:
     ap.add_argument("--rounds", type=int, nargs="*", help="restrict to these round numbers")
     ap.add_argument("--in-progress", action="store_true",
                     help="also pull finished sessions of a weekend whose race has not run yet")
+    ap.add_argument("--refetch", nargs="+", metavar="SESSION",
+                    help="re-pull these already-stored sessions (needs --rounds), to repair a "
+                         "degraded response; e.g. --rounds 16 --refetch Qualifying")
     args = ap.parse_args()
+    if args.refetch and not args.rounds:
+        ap.error("--refetch needs --rounds: refusing to re-pull a whole season")
 
     t0 = time.time()
     all_failures: list[tuple] = []
     for year in args.years:
         print(f"== {year}", flush=True)
-        all_failures += backfill_year(year, args.rounds, args.in_progress)
+        all_failures += backfill_year(year, args.rounds, args.in_progress, args.refetch)
         print(f"[{time.time()-t0:5.0f}s] finished {year}", flush=True)
 
     if all_failures:
