@@ -8,15 +8,16 @@ weekend before its race.
 **Status: Day 3 of a 3-day build.** Built: data pipeline, replay and live weekends, per-session
 charts, race prediction with a backtest, race-result view, generated commentary, a "race starts soon"
 banner, and a new website for a general F1 audience (`web/`, Next.js on Vercel). The original
-Streamlit app is still in place.
+Streamlit app is kept in the repo but is no longer deployed.
 
 Two front ends read the same data:
 
-- **Website** (`web/`, static Next.js, deployed on Vercel): the fan-facing version. 2026 weekends only,
-  a start-light timeline with autoplay, plain-language explanations, race-control style commentary,
-  and a "lights out" race reveal. See [web/README.md](web/README.md).
+- **Website** (`web/`, static Next.js, deployed on Vercel): the fan-facing version and the only one
+  published. 2026 weekends only, a start-light timeline with autoplay, plain-language explanations,
+  race-control style commentary, and a "lights out" race reveal. See [web/README.md](web/README.md).
 - **Streamlit app** (`app.py`): the original analysis view, including earlier seasons' data and the
-  backtest charts.
+  backtest charts. Taken offline on 2026-10-27, now that the website covers the same ground; the
+  code is kept and still runs locally with `streamlit run app.py`.
 
 ## What the app does
 

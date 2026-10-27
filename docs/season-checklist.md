@@ -84,7 +84,7 @@ Still manual: the **starting grid** after qualifying, and the **holdout table** 
 | Then (after every backtest, live or finished) | `python scripts/export_site.py` | Refreshes the website's JSON in `web/` (calendar, replay files, race results, accuracy); offline once the backfill has run |
 | Then | `python -m pytest tests` | Leak, integrity and freshness tests must pass |
 | Then | add the race's Auto after-Q scores to the holdout table in `docs/evaluation.md` §6 | Frozen model: report, don't tune (see the freeze rules there) |
-| Then | commit `data/*.parquet` and `web/data`, `web/public/data`, push; reboot the Streamlit app (Manage app → Reboot) | Both deployed front ends only read committed files; Vercel rebuilds the website on push |
+| Then | commit `data/*.parquet` and `web/data`, `web/public/data`, push | The website only reads committed files; Vercel rebuilds it on push. The Streamlit app is no longer deployed (taken offline 2026-10-27), so there is nothing to reboot - run it locally with `streamlit run app.py` if you want the analysis view |
 
 Traps:
 - **Pulling too early.** The backfill skips any (round, session) already stored, so a session
