@@ -30,11 +30,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <header className="border-b border-line">
           <RaceBanner rounds={season.rounds} year={season.year} />
           <nav className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3" aria-label="Main">
+            {/* The mark carries RC itself and is far wider than the old one, so on a phone it
+                stands alone: logo plus wordmark plus three links does not fit 360px. */}
             <Link href="/" className="flex shrink-0 items-center gap-2.5" aria-label="Race Weekend Companion, home">
               <Logo />
-              <span className="wide text-[15px] sm:text-[17px]">
-                <span className="hidden sm:inline">Race Weekend </span>Companion
-              </span>
+              <span className="wide hidden text-[17px] lg:inline">Race Weekend Companion</span>
             </Link>
             <div className="ml-auto flex items-center gap-0.5 text-sm text-ink-2 sm:gap-1">
               <Link className="rounded px-2 py-1.5 hover:bg-surface-2 hover:text-ink sm:px-2.5" href="/">Season</Link>

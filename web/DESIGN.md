@@ -32,8 +32,14 @@ F1 TV-graphics motif - only on the timing tower, the result chart, the gantry ho
 buttons.
 
 Start lights: each lamp is an LED cluster (a 5 x 5 pixel grid on a round lamp), lit pixels red,
-unlit pixels still visible - no glow. The logo is the same gantry as an LED matrix: a chamfered
-housing, two rows of five, three columns lit.
+unlit pixels still visible - no glow.
+
+Logo: a Formula 1 car at speed, bone bodywork over a racing-red slipstream, with RC set italic
+beneath the nose and underscored in red - a chassis marking, the way a number is painted on a tub.
+The artwork is traced to outlines and the lettering is baked to paths, so the mark never depends on
+Saira having loaded. It is wide (200 x 48, about 4:1), so the wordmark beside it only appears from
+`lg` up; below that the mark stands alone. The favicon drops the car, which cannot survive 16px,
+and carries the monogram alone on the chamfered housing.
 
 ## Layout
 
